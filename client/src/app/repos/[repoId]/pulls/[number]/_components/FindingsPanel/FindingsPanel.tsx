@@ -1,15 +1,20 @@
-/* FindingsPanel — hide-low-confidence + j/k navigation + FindingCard list,
-   wiring the accept/dismiss action hook (A2). */
+/* FindingsPanel — one review run's findings: a severity counter row (only the
+   levels present), three severity filter buttons, hide-low-confidence, j/k
+   navigation + FindingCard list, wiring the accept/dismiss action hook (A2).
+   The counters tally exactly the cards the list can show (after
+   hide-low-confidence, dismissed included), so filtering to a level always
+   shows that many cards. */
 "use client";
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Toggle, EmptyState } from "@devdigest/ui";
+import { Toggle, EmptyState, Chip, Button, Badge, SEV } from "@devdigest/ui";
 import type { FindingRecord, Severity } from "@devdigest/shared";
 import { FindingCard } from "../FindingCard";
 import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
 import { KEY_TO_ACTION } from "./constants";
-import { visibleFindings } from "./helpers";
+import { COUNT_KEY, SEVERITIES, countBySeverity } from "@/lib/findings";
+import { confidentFindings, visibleFindings } from "./helpers";
 import { s } from "./styles";
 
 export function FindingsPanel({
@@ -17,25 +22,29 @@ export function FindingsPanel({
   prId,
   repoFullName,
   headSha,
-  severityFilter = null,
 }: {
   findings: FindingRecord[];
   prId: string;
   repoFullName?: string | null;
   headSha?: string | null;
-  /** Show only this severity (driven by the PR-level severity filter bar). */
-  severityFilter?: Severity | null;
 }) {
   const t = useTranslations("prReview");
   const action = useFindingAction();
   const [hideLow, setHideLow] = React.useState(false);
+  const [severityFilter, setSeverityFilter] = React.useState<Severity | null>(null);
   const [focusIdx, setFocusIdx] = React.useState(0);
+
+  const counts = React.useMemo(
+    () => countBySeverity(confidentFindings(findings, hideLow), { includeDismissed: true }),
+    [findings, hideLow],
+  );
+  const levels = SEVERITIES.filter((sev) => counts[COUNT_KEY[sev]] > 0);
 
   const shown = React.useMemo(
     () => visibleFindings(findings, hideLow, severityFilter),
     [findings, hideLow, severityFilter],
   );
-  React.useEffect(() => setFocusIdx(0), [severityFilter]);
+  React.useEffect(() => setFocusIdx(0), [severityFilter, hideLow]);
 
   // j/k navigation + a/d shortcuts on the focused finding (keyboard).
   React.useEffect(() => {
@@ -54,7 +63,44 @@ export function FindingsPanel({
 
   return (
     <div>
+      {levels.length > 0 && (
+        <div data-testid="severity-counts" style={s.countRow}>
+          {levels.map((sev, i) => (
+            <React.Fragment key={sev}>
+              {i > 0 && <span style={s.countSep}>·</span>}
+              <Badge icon={SEV[sev].icon} color={SEV[sev].c} bg={SEV[sev].bg}>
+                <span className="tnum">{counts[COUNT_KEY[sev]]}</span> {SEV[sev].label.toUpperCase()}
+              </Badge>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
       <div style={s.toolbar}>
+        {findings.length > 0 && (
+          <div role="group" aria-label={t("severity.filterLabel")} style={s.severityBar}>
+            {SEVERITIES.map((sev) => {
+              const n = counts[COUNT_KEY[sev]];
+              const active = severityFilter === sev;
+              return (
+                <span key={sev} style={n === 0 && !active ? s.chipDisabled : undefined}>
+                  <Chip
+                    icon={SEV[sev].icon}
+                    color={SEV[sev].c}
+                    active={active}
+                    onClick={n === 0 && !active ? undefined : () => setSeverityFilter(active ? null : sev)}
+                  >
+                    {SEV[sev].label}
+                  </Chip>
+                </span>
+              );
+            })}
+            {severityFilter && (
+              <Button kind="ghost" size="sm" icon="X" onClick={() => setSeverityFilter(null)}>
+                {t("severity.filterReset")}
+              </Button>
+            )}
+          </div>
+        )}
         <div style={s.toggleGroup}>
           {t("panel.hideLowConfidence")}
           <Toggle on={hideLow} onChange={setHideLow} size={16} />

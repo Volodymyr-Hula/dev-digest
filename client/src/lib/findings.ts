@@ -19,12 +19,16 @@ export const COUNT_KEY: Record<Severity, keyof SeverityCounts> = {
   SUGGESTION: "suggestion",
 };
 
-/** Tally non-dismissed findings per severity — mirrors the server's
- *  `rollupSeverities` + `dismissed_at IS NULL` (PR list `severity_counts`). */
-export function countBySeverity(findings: FindingRecord[]): SeverityCounts {
+/** Tally findings per severity. By default skips dismissed ones — mirrors the
+ *  server's `rollupSeverities` + `dismissed_at IS NULL` (PR list `severity_counts`).
+ *  `includeDismissed` counts every finding given (a list that still shows them). */
+export function countBySeverity(
+  findings: FindingRecord[],
+  { includeDismissed = false }: { includeDismissed?: boolean } = {},
+): SeverityCounts {
   const c: SeverityCounts = { critical: 0, warning: 0, suggestion: 0 };
   for (const f of findings) {
-    if (f.dismissed_at) continue;
+    if (f.dismissed_at && !includeDismissed) continue;
     const key = COUNT_KEY[f.severity as Severity];
     if (key) c[key] += 1;
   }

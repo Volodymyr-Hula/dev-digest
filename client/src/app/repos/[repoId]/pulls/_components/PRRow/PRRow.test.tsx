@@ -39,7 +39,7 @@ function renderRow(pr: PrMeta) {
 }
 
 describe("PRRow cost cell", () => {
-  it("shows the latest run's cost compactly", () => {
+  it("shows the PR's total run cost compactly", () => {
     renderRow({ ...PR, score: 65, cost_usd: 0.0123 });
     expect(screen.getByText("$0.012")).toBeInTheDocument();
   });

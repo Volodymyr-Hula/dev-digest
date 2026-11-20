@@ -38,7 +38,7 @@ describe("SeverityCounts", () => {
     renderIntl(<SeverityCounts counts={{ critical: 1, warning: 2, suggestion: 1 }} popover findings={FINDINGS} />);
     fireEvent.mouseEnter(screen.getByLabelText(/^Findings:/));
     const tip = screen.getByRole("tooltip");
-    expect(tip).toHaveTextContent("4 findings");
+    expect(tip).toHaveTextContent("4 findings in this run");
     expect(tip).toHaveTextContent("Leaked key");
     expect(tip).toHaveTextContent("src/config.ts:12");
     expect(tip).toHaveTextContent("+1 more");

@@ -1,10 +1,10 @@
 {
   "finding": {
     "accepted": "accepted",
-    "dismissed": "dismissed",
+    "dismissed": "rejected",
     "suggestedFix": "Suggested fix",
     "accept": "Accept",
-    "dismiss": "Dismiss",
+    "dismiss": "Reject",
     "learn": "Learn",
     "replyToAuthor": "Reply to author",
     "replyPlaceholder": "Reply to the author about this finding…",
@@ -111,12 +111,10 @@
   },
   "severity": {
     "ariaLabel": "Findings: {counts}",
-    "popoverTitle": "{count, plural, one {# finding} other {# findings}}",
+    "popoverTitle": "{count, plural, one {# finding} other {# findings}} in this run",
     "loading": "Loading findings…",
     "more": "+{count} more",
     "filterLabel": "Show only",
-    "filterReset": "Show all",
-    "noMatchTitle": "No findings at this level",
-    "noMatchBody": "No review run has non-dismissed findings of this severity."
+    "filterReset": "Show all"
   }
 }

@@ -98,3 +98,15 @@ describe("RunHistory — severity counters", () => {
     expect(screen.getByText("3 finding(s)")).toBeInTheDocument();
   });
 });
+
+describe("RunHistory — run cost", () => {
+  it("a settled run tile shows its cost and token flow", () => {
+    renderRuns([run({ status: "done", cost_usd: 0.0123, tokens_in: 8200, tokens_out: 1240 })]);
+    expect(screen.getByTestId("timeline-run-cost")).toHaveTextContent("$0.012 · 8.2K→1.2K");
+  });
+
+  it("a failed run tile shows no cost", () => {
+    renderRuns([run({ status: "failed", error: "boom" })]);
+    expect(screen.queryByTestId("timeline-run-cost")).not.toBeInTheDocument();
+  });
+});

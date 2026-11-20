@@ -7,7 +7,7 @@
 
 import React from "react";
 import { Icon, Badge } from "@devdigest/ui";
-import type { ReviewRecord, RunSummary, Severity, Verdict } from "@devdigest/shared";
+import type { ReviewRecord, RunSummary, Verdict } from "@devdigest/shared";
 import { FindingsPanel } from "../FindingsPanel";
 import { VerdictBanner } from "../VerdictBanner";
 import { useDeleteReview } from "../../../../../../../lib/hooks/reviews";
@@ -32,7 +32,6 @@ export function ReviewRunAccordion({
   headSha,
   targetRunId = null,
   targetNonce = 0,
-  severityFilter = null,
 }: {
   review: ReviewRecord;
   /** The agent_runs row behind this review (cost + tokens for the verdict banner). */
@@ -45,9 +44,6 @@ export function ReviewRunAccordion({
    *  (driven from the Timeline: clicking an agent name navigates here). */
   targetRunId?: string | null;
   targetNonce?: number;
-  /** PR-level severity filter: hides this run when it has no live findings of
-   *  that level, otherwise opens it showing only those. */
-  severityFilter?: Severity | null;
 }) {
   const [open, setOpen] = React.useState(defaultOpen);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
@@ -58,14 +54,8 @@ export function ReviewRunAccordion({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetRunId, targetNonce, review.run_id]);
-  React.useEffect(() => {
-    if (severityFilter) setOpen(true);
-  }, [severityFilter]);
   const del = useDeleteReview(prId);
   const findings = review.findings;
-  if (severityFilter && !findings.some((f) => f.severity === severityFilter && !f.dismissed_at)) {
-    return null;
-  }
   const blockers = findings.filter((f) => f.severity === "CRITICAL" && !f.dismissed_at).length;
   const verdictColor = review.verdict ? VERDICT_COLOR[review.verdict] ?? "var(--text-muted)" : "var(--text-muted)";
 
@@ -166,7 +156,6 @@ export function ReviewRunAccordion({
             prId={prId}
             repoFullName={repoFullName}
             headSha={headSha}
-            severityFilter={severityFilter}
           />
         </div>
       )}

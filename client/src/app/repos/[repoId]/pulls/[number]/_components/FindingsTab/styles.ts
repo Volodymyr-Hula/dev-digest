@@ -1,14 +1,6 @@
 import type { CSSProperties } from "react";
 
 export const s = {
-  severityBar: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-    marginBottom: 14,
-  } satisfies CSSProperties,
-  chipDisabled: { opacity: 0.45, pointerEvents: "none" } satisfies CSSProperties,
   reviewInProgress: {
     marginBottom: 18,
     display: "flex",

@@ -62,40 +62,14 @@ function renderTab() {
   );
 }
 
-const chips = () =>
-  screen.getByRole("group", { name: "Show only" }).querySelectorAll("button");
-
-describe("FindingsTab severity filter", () => {
-  it("counts live findings across every run", () => {
+describe("FindingsTab severity counters", () => {
+  it("each run card has its own counters, scoped to that card", () => {
     renderTab();
-    const [crit, warn, sugg] = Array.from(chips());
-    expect(crit).toHaveTextContent("1 CRITICAL");
-    expect(warn).toHaveTextContent("1 WARNING");
-    expect(sugg).toHaveTextContent("1 SUGGESTION");
-  });
-
-  it("clicking a level shows only its findings and hides runs without any; clicking again resets", () => {
-    renderTab();
-    fireEvent.click(screen.getByRole("button", { name: /1 SUGGESTION/ }));
-    expect(screen.getByText("Memoize list")).toBeInTheDocument();
-    expect(screen.queryAllByText("Security Reviewer")).toHaveLength(0);
-
-    fireEvent.click(screen.getByRole("button", { name: /1 CRITICAL/ }));
-    expect(screen.getByText("Leaked key")).toBeInTheDocument();
-    expect(screen.queryByText("Missing header")).not.toBeInTheDocument();
-    expect(screen.queryByText("Old crit")).not.toBeInTheDocument();
-    expect(screen.queryAllByText("Performance Reviewer")).toHaveLength(0);
-
-    fireEvent.click(screen.getByRole("button", { name: /1 CRITICAL/ }));
-    expect(screen.getAllByText("Security Reviewer").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Performance Reviewer").length).toBeGreaterThan(0);
-  });
-
-  it("the Show all button clears the filter", () => {
-    renderTab();
-    fireEvent.click(screen.getByRole("button", { name: /1 WARNING/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Show all" }));
-    expect(screen.getAllByText("Performance Reviewer").length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Show all" })).not.toBeInTheDocument();
+    // Only the first (default-open) card renders its panel.
+    const rows = screen.getAllByTestId("severity-counts");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("2 CRITICAL·1 WARNING"); // dismissed card is listed, so counted
+    expect(rows[0]).not.toHaveTextContent("SUGGESTION"); // the other run's suggestion is not counted
+    expect(screen.getAllByRole("group", { name: "Show only" })).toHaveLength(1);
   });
 });

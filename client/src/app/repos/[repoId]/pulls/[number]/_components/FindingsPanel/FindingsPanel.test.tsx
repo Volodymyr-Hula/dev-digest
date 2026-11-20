@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { FindingRecord } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
@@ -55,23 +55,51 @@ describe("FindingsPanel (smoke)", () => {
   });
 });
 
-describe("FindingsPanel severity filter", () => {
+describe("FindingsPanel severity counters + filter", () => {
   const MIXED = [
     finding({ id: "c", severity: "CRITICAL", title: "Crit one" }),
     finding({ id: "w", severity: "WARNING", title: "Warn one" }),
     finding({ id: "wd", severity: "WARNING", title: "Warn dismissed", dismissed_at: "2026-11-20T00:00:00Z" }),
+    finding({ id: "wl", severity: "WARNING", title: "Warn low", confidence: 0.3 }),
   ];
+  const filter = (name: string) => screen.getByRole("button", { name });
+  const row = () => screen.getByTestId("severity-counts");
 
-  it("shows every finding without a filter", () => {
+  it("counts every card the list shows, dismissed included, listing only present levels", () => {
     renderWithIntl(<FindingsPanel findings={MIXED} prId="pr1" />);
-    expect(screen.getByText("Crit one")).toBeInTheDocument();
+    expect(row()).toHaveTextContent("1 CRITICAL·3 WARNING");
+    expect(row()).not.toHaveTextContent("SUGGESTION");
     expect(screen.getByText("Warn dismissed")).toBeInTheDocument();
   });
 
-  it("keeps only live findings of the filtered severity", () => {
-    renderWithIntl(<FindingsPanel findings={MIXED} prId="pr1" severityFilter="WARNING" />);
+  it("always renders the three filter buttons", () => {
+    renderWithIntl(<FindingsPanel findings={MIXED} prId="pr1" />);
+    expect(filter("Critical")).toBeInTheDocument();
+    expect(filter("Warning")).toBeInTheDocument();
+    expect(filter("Suggestion")).toBeInTheDocument();
+  });
+
+  it("filtering to a level shows exactly as many cards as its counter; a second click resets", () => {
+    renderWithIntl(<FindingsPanel findings={MIXED} prId="pr1" />);
+    fireEvent.click(filter("Warning"));
     expect(screen.getByText("Warn one")).toBeInTheDocument();
+    expect(screen.getByText("Warn dismissed")).toBeInTheDocument();
+    expect(screen.getByText("Warn low")).toBeInTheDocument();
     expect(screen.queryByText("Crit one")).not.toBeInTheDocument();
-    expect(screen.queryByText("Warn dismissed")).not.toBeInTheDocument();
+
+    fireEvent.click(filter("Warning"));
+    expect(screen.getByText("Crit one")).toBeInTheDocument();
+
+    fireEvent.click(filter("Critical"));
+    expect(screen.queryByText("Warn one")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show all" }));
+    expect(screen.getByText("Warn one")).toBeInTheDocument();
+  });
+
+  it("hide low confidence lowers the counters along with the list", () => {
+    renderWithIntl(<FindingsPanel findings={MIXED} prId="pr1" />);
+    fireEvent.click(screen.getByRole("switch"));
+    expect(row()).toHaveTextContent("2 WARNING");
+    expect(screen.queryByText("Warn low")).not.toBeInTheDocument();
   });
 });
