@@ -24,10 +24,43 @@ Each module has its own `CLAUDE.md`, plus `docs/`, `specs/` and `INSIGHTS.md`. R
 
 Node ≥ 22 · TypeScript 5.9 (`strict`, ESM, `moduleResolution: Bundler`) · zod 3 · vitest 2 · Postgres 16 + pgvector (Docker, the only containerised service).
 
+## Commands
+
+Four independent packages, no workspace: install, run and test inside each package directory. Package manager follows the lockfile: **pnpm 10** in `server/` and `client/`, **npm** in `reviewer-core/` and `e2e/`.
+
+| Where | Run | Test | Typecheck |
+|-------|-----|------|-----------|
+| repo root | `./scripts/dev.sh` (Postgres + migrate + seed + API + web) | `./scripts/e2e.sh` (isolated browser e2e) | — |
+| `server/` | `pnpm dev` · `pnpm db:migrate` · `pnpm db:seed` | `pnpm test`; unit only: `pnpm exec vitest run --exclude '**/*.it.test.ts'` | `pnpm typecheck` |
+| `client/` | `pnpm dev` | `pnpm test` | `pnpm typecheck` |
+| `reviewer-core/` | — (library) | `npm test` | `npm run typecheck` |
+| `e2e/` | — | via `./scripts/e2e.sh` | `npm run typecheck` |
+
+No linter or formatter is configured; `typecheck` is the static gate before a commit.
+
+## Naming
+
+- Files and folders: kebab-case (`contained-read.ts`, `repo-intel/`, `client/src/components/severity-counts/`). Exceptions, all in `client/`:
+  - React component files: `PascalCase.tsx`. Under `_components/` the folder is PascalCase too (`_components/FindingsPanel/FindingsPanel.tsx`); a cross-page component in `src/components/` sits in a kebab-case folder (`severity-counts/SeverityCounts.tsx`).
+  - React hooks: camelCase `useX.ts` (`app-shell/hooks/useShellContext.ts`). TanStack Query hook modules in `src/lib/hooks/` are kebab-case per domain (`repo-intel.ts`).
+  - Next.js route segments follow the router: `[repoId]`, `[number]`; `_`-prefixed folders/files are private (`_components/`, `server/src/db/schema/_shared.ts`).
+- Server feature module: `server/src/modules/<kebab-name>/routes.ts`.
+- Tests: `*.test.ts(x)`; DB-backed integration tests `*.it.test.ts`.
+  - `client/`: colocated next to the source, `Name.test.tsx` / `name.test.ts`.
+  - `server/test/`: `<area>[-<topic>].test.ts`, where `<area>` is a module, adapter or platform piece (`pulls-status.test.ts`, `repo-intel-resync.test.ts`, `contracts.test.ts`, `price-book.test.ts`).
+  - `reviewer-core/test/`: named after the source file (`to-review.test.ts` ↔ `src/output/to-review.ts`).
+- E2E flows: `e2e/flows/NN-<name>.flow.json`, `NN` the next free two-digit number.
+- Migrations: `NNNN_<name>.sql`, name chosen by `drizzle-kit`.
+
+## Protected files
+
+Change these only through their tool, never by hand:
+
+- **Migrations** (`server/src/db/migrations/*.sql`, `meta/`) — committed migrations are immutable history. A schema change goes in `server/src/db/schema/*.ts`, then `pnpm db:generate` adds a new migration.
+- **Lockfiles** (`server/pnpm-lock.yaml`, `client/pnpm-lock.yaml`, `reviewer-core/package-lock.json`, `e2e/package-lock.json`) — they change only as a side effect of `pnpm add/remove` (pnpm 10) or `npm install <pkg>` in that package, committed together with its `package.json`.
+
 ## Conventions
 
-- Four independent packages, no workspace: install, run and test inside each package directory.
-- Package manager follows the lockfile: **pnpm** in `server/` and `client/`, **npm** in `reviewer-core/` and `e2e/`.
 - Cross-package code is shared as TypeScript **source** through tsconfig path aliases, never published packages. `@devdigest/shared` (Zod contracts + adapter interfaces) physically lives in `server/src/vendor/shared`.
 - Git history starts at `92268dc9` (merge of PR #257, the starter backport); older commits are out of scope. Bound history queries to it: `git log 92268dc9..HEAD`, `git diff 92268dc9`.
 
