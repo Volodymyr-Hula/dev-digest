@@ -134,15 +134,12 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
           latestReviewByPr.set(rv.prId, { id: rv.id, score: rv.score, costUsd: rv.costUsd });
         }
       }
-      const latest = [...latestReviewByPr.values()];
-      if (latest.length > 0) {
+      for (const l of latestReviewByPr.values()) {
         const findingRows = await container.db
-          .select({ reviewId: t.findings.reviewId, severity: t.findings.severity })
+          .select({ severity: t.findings.severity })
           .from(t.findings)
-          .where(and(inArray(t.findings.reviewId, latest.map((l) => l.id)), isNull(t.findings.dismissedAt)));
-        for (const l of latest) {
-          l.counts = rollupSeverities(findingRows.filter((f) => f.reviewId === l.id));
-        }
+          .where(and(eq(t.findings.reviewId, l.id), isNull(t.findings.dismissedAt)));
+        l.counts = rollupSeverities(findingRows);
       }
     }
 
