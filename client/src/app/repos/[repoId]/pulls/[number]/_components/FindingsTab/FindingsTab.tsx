@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { Icon, Badge, Button, SectionLabel, EmptyState } from "@devdigest/ui";
+import { useTranslations } from "next-intl";
+import { Icon, Badge, Button, Chip, SectionLabel, EmptyState, SEV } from "@devdigest/ui";
 import { RunStatus } from "../RunStatus";
 import { RunHistory } from "../RunHistory/RunHistory";
 import { ReviewRunAccordion } from "../ReviewRunAccordion";
 import { s } from "./styles";
-import type { FindingRecord, ReviewRecord, RunSummary, PrCommit } from "@devdigest/shared";
+import type { FindingRecord, ReviewRecord, RunSummary, PrCommit, Severity } from "@devdigest/shared";
+import { COUNT_KEY, SEVERITIES, countBySeverity } from "@/lib/findings";
 import type { UseMutationResult } from "@tanstack/react-query";
 
 interface FindingsTabProps {
@@ -62,6 +64,20 @@ export function FindingsTab({
     },
     [onDelete],
   );
+
+  const t = useTranslations("prReview");
+
+  // PR-level severity filter: the bar counts live findings across every run;
+  // picking a level narrows each run to it and hides runs without any.
+  const [severityFilter, setSeverityFilter] = React.useState<Severity | null>(null);
+  const counts = React.useMemo(() => countBySeverity(runs.flatMap((r) => r.findings)), [runs]);
+  const findingsByRun = React.useMemo(
+    () => new Map(runs.filter((r) => r.run_id).map((r) => [r.run_id!, r.findings])),
+    [runs],
+  );
+  const filterEmpty =
+    severityFilter != null &&
+    !runs.some((r) => r.findings.some((f) => f.severity === severityFilter && !f.dismissed_at));
 
   // Timeline → Review-runs navigation: clicking an agent name in the timeline
   // opens + scrolls to that run's accordion below. The nonce re-triggers the
@@ -134,6 +150,7 @@ export function FindingsTab({
             onOpenTrace={handleOpenTrace}
             onGoToReview={handleGoToReview}
             onDelete={handleDelete}
+            findingsByRun={findingsByRun}
           />
         </div>
       )}
@@ -144,6 +161,34 @@ export function FindingsTab({
       >
         Review runs
       </SectionLabel>
+      {runs.length > 0 && (
+        <div role="group" aria-label={t("severity.filterLabel")} style={s.severityBar}>
+          {SEVERITIES.map((sev) => {
+            const n = counts[COUNT_KEY[sev]];
+            const active = severityFilter === sev;
+            return (
+              <span key={sev} style={n === 0 && !active ? s.chipDisabled : undefined}>
+                <Chip
+                  icon={SEV[sev].icon}
+                  color={SEV[sev].c}
+                  active={active}
+                  onClick={n === 0 && !active ? undefined : () => setSeverityFilter(active ? null : sev)}
+                >
+                  <span className="tnum">{n}</span> {SEV[sev].label.toUpperCase()}
+                </Chip>
+              </span>
+            );
+          })}
+          {severityFilter && (
+            <Button kind="ghost" size="sm" icon="X" onClick={() => setSeverityFilter(null)}>
+              {t("severity.filterReset")}
+            </Button>
+          )}
+        </div>
+      )}
+      {filterEmpty && (
+        <EmptyState icon="Filter" title={t("severity.noMatchTitle")} body={t("severity.noMatchBody")} />
+      )}
       {runs.length === 0 ? (
         reviewRunning || liveRunIds.length > 0 ? null : (
           <EmptyState
@@ -165,6 +210,7 @@ export function FindingsTab({
             headSha={headSha}
             targetRunId={target?.runId ?? null}
             targetNonce={target?.n ?? 0}
+            severityFilter={severityFilter}
           />
         ))
       )}

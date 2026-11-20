@@ -3,6 +3,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { FindingRecord } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
+import { finding } from "@/test/findings";
 
 vi.mock("../../../../../../../lib/hooks/reviews", () => ({
   useFindingAction: () => ({ mutate: vi.fn(), isPending: false }),
@@ -51,5 +52,26 @@ describe("FindingsPanel (smoke)", () => {
   it("shows the empty state when nothing matches", () => {
     renderWithIntl(<FindingsPanel findings={[]} prId="pr1" />);
     expect(screen.getByText("No findings match")).toBeInTheDocument();
+  });
+});
+
+describe("FindingsPanel severity filter", () => {
+  const MIXED = [
+    finding({ id: "c", severity: "CRITICAL", title: "Crit one" }),
+    finding({ id: "w", severity: "WARNING", title: "Warn one" }),
+    finding({ id: "wd", severity: "WARNING", title: "Warn dismissed", dismissed_at: "2026-11-20T00:00:00Z" }),
+  ];
+
+  it("shows every finding without a filter", () => {
+    renderWithIntl(<FindingsPanel findings={MIXED} prId="pr1" />);
+    expect(screen.getByText("Crit one")).toBeInTheDocument();
+    expect(screen.getByText("Warn dismissed")).toBeInTheDocument();
+  });
+
+  it("keeps only live findings of the filtered severity", () => {
+    renderWithIntl(<FindingsPanel findings={MIXED} prId="pr1" severityFilter="WARNING" />);
+    expect(screen.getByText("Warn one")).toBeInTheDocument();
+    expect(screen.queryByText("Crit one")).not.toBeInTheDocument();
+    expect(screen.queryByText("Warn dismissed")).not.toBeInTheDocument();
   });
 });

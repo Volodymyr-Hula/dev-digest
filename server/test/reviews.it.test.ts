@@ -269,6 +269,43 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     await app.close();
   });
 
+  it('PR list: severity_counts tally the latest review and skip dismissed findings', async () => {
+    const app = await buildApp({
+      config: config(),
+      db: pg.handle.db,
+      overrides: {
+        embedder: new MockEmbedder(),
+        git: new MockGitClient({ diff: DIFF }),
+        github: new MockGitHubClient({ pulls: [] }),
+        llm: { openai: new MockLLMProvider('openai', { structured: REVIEW_FIXTURE }) },
+      },
+    });
+    const { repo, pr } = await setupRepoAndPr(pg.handle.db, workspaceId);
+    const agent = (
+      await app.inject({
+        method: 'POST',
+        url: '/agents',
+        payload: { name: 'Sev', provider: 'openai', model: 'gpt-4.1', system_prompt: 's' },
+      })
+    ).json();
+    await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } });
+    await waitForPrRuns(pg.handle.db, pr.id, { expected: 1 });
+
+    const listPr = async () =>
+      (await app.inject({ method: 'GET', url: `/repos/${repo.id}/pulls` }))
+        .json()
+        .find((p: { id: string }) => p.id === pr.id);
+
+    // Grounding drops the line-999 WARNING, so only the CRITICAL survives.
+    expect((await listPr()).severity_counts).toEqual({ critical: 1, warning: 0, suggestion: 0 });
+
+    const [review] = (await app.inject({ method: 'GET', url: `/pulls/${pr.id}/reviews` })).json();
+    await app.inject({ method: 'POST', url: `/findings/${review.findings[0].id}/dismiss` });
+    expect((await listPr()).severity_counts).toEqual({ critical: 0, warning: 0, suggestion: 0 });
+
+    await app.close();
+  });
+
   it('dual-provider structured output: anthropic provider returns the same Review shape', async () => {
     const app = await appWith(REVIEW_FIXTURE, 'anthropic');
     const { pr } = await setupRepoAndPr(pg.handle.db, workspaceId);

@@ -16,6 +16,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Tool & Library Notes
 <!-- dependency quirks, version-specific behaviour, CLI gotchas -->
+- **Save Playwright-MCP screenshots under `.playwright-mcp/` in the repo and delete the folder after** — the plugin refuses paths outside the repo root (`File access denied: … is outside allowed roots`), so the session scratchpad can't be used, and `.playwright-mcp/` is not in `.gitignore`. Evidence: `browser_take_screenshot` error; `git check-ignore .playwright-mcp` → not ignored. (2026-11-20)
 
 ## Recurring Errors & Fixes
 <!-- exact error text → cause → fix -->
@@ -25,6 +26,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
 - 2026-11-20 — module docs/specs + cross-file dedupe → moved e2e CI path-filter gap here from `e2e/docs/architecture.md`.
+- 2026-11-20 — findings severity counters + filter (list, timeline, PR page) → Playwright-MCP screenshot location.
 - 2026-11-20 — split insights into root (cross-module) + per-module → moved pnpm, `.env`, Postgres-port and `WEB_PORT` entries here from `server/` and `client/`.
 - 2026-11-20 — dev boot failed on pnpm 12 → pnpm-10-only rule.
 - 2026-11-19 — moved dev ports to Postgres 55432 / API 13001 / web 13000 → stale-container recreate fix, `.env` not refreshed by `dev.sh`, `WEB_PORT` not read by Next.
