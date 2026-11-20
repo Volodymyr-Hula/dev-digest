@@ -23,7 +23,7 @@ How a repo enters the system, how its PRs are synced from GitHub into Postgres, 
 - **PI-7 Local-first.** If `container.github()` throws (no `GITHUB_TOKEN`) or the GitHub call fails, the handler logs a warning and serves persisted rows; it never fails the read (`:34-39,75-77`).
 - **PI-8** Sync is an upsert on `(repo_id, number)` — unique index `pr_repo_number_uq` (`db/schema/pulls.ts:31`). On conflict **only** `title`, `head_sha`, `status`, `updated_at` are updated (`pulls/routes.ts:65-72`); `author`, `branch`, `base`, `additions`, `deletions`, `files_count` are written once at insert. There is no transaction around the loop.
 - **PI-9** Diff stats are not in GitHub's list payload, so rows with `additions=0 ∧ deletions=0 ∧ files_count=0` are backfilled from `getPullRequest`, at most `BACKFILL_LIMIT = 10` per request (`:89-112`).
-- **PI-10** Response rows (`PrMeta`) carry `score`, `cost_usd`, `severity_counts` of the **latest** `kind='review'` review (newest `created_at`); all `null` when never reviewed. `severity_counts` excludes dismissed findings (`:114-147`, status of this change: uncommitted at time of writing). `cost_usd` is the snapshot on the producing run ([review-flow.md](review-flow.md) RF-41).
+- **PI-10** Response rows (`PrMeta`) carry `score` and `severity_counts` of the **latest** `kind='review'` review (newest `created_at`); both `null` when never reviewed. `severity_counts` excludes dismissed findings. `cost_usd` is the **sum** of `agent_runs.cost_usd` over every `status='done'` run of the PR (failed/cancelled excluded); `null` when no such run has a cost ([review-flow.md](review-flow.md) RF-41).
 
 ## PR detail — `GET /pulls/:id` (`:179`)
 

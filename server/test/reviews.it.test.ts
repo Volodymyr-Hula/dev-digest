@@ -266,6 +266,16 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     expect(byId.get(pr.id)).toMatchObject({ cost_usd: 0.001 });
     expect(byId.get(unreviewed!.id)).toMatchObject({ cost_usd: null, score: null });
 
+    // PR list cost = sum over every successful run; failed runs are excluded.
+    await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } });
+    await waitForPrRuns(pg.handle.db, pr.id, { expected: 2 });
+    await pg.handle.db
+      .insert(t.agentRuns)
+      .values({ workspaceId, prId: pr.id, status: 'failed', costUsd: 5 });
+    const list2 = (await app.inject({ method: 'GET', url: `/repos/${repo.id}/pulls` })).json();
+    const pr2 = list2.find((p: { id: string }) => p.id === pr.id);
+    expect(pr2.cost_usd).toBeCloseTo(0.002, 10);
+
     await app.close();
   });
 

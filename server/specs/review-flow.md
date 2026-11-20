@@ -118,7 +118,7 @@ Written in this order, as independent statements (no transaction wraps them):
 
 - **RF-39** Per-call `costUsd` comes from the adapter: OpenAI/Anthropic via the static table `estimateCost` (`adapters/llm/pricing.ts:37`), OpenRouter via `PriceBook.estimate` (live `/models` prices, 6 h TTL, synchronous; cold or failed cache falls back to the static table; `platform/price-book.ts:34`).
 - **RF-40** An unpriced model yields `null` (`pricing.ts:39`); how chunk costs combine into the run total is reviewer-core C12.
-- **RF-41** The total is a **snapshot** stored on `agent_runs.cost_usd` (double precision) at completion and never recomputed. It is surfaced as `cost_usd` on `GET /pulls/:id/runs` (`run.repo.ts:62`), `trace.stats.cost_usd`, and `GET /repos/:id/pulls` via `reviews.run_id → agent_runs` left join for the **latest** review (`pulls/routes.ts:120-134`); `null` for never-reviewed PRs. Pinned by `test/reviews.it.test.ts:215` (single-pass mock run ⇒ 100/50 tokens, `0.001`).
+- **RF-41** The total is a **snapshot** stored on `agent_runs.cost_usd` (double precision) at completion and never recomputed. It is surfaced as `cost_usd` on `GET /pulls/:id/runs` (`run.repo.ts:62`), `trace.stats.cost_usd`, and `GET /repos/:id/pulls` as the **sum** over all `status='done'` runs of the PR (`pulls/routes.ts`); `null` for PRs without a successful priced run. Pinned by `test/reviews.it.test.ts:215` (single-pass mock run ⇒ 100/50 tokens, `0.001`).
 
 ## 9. Triage and deletion
 
