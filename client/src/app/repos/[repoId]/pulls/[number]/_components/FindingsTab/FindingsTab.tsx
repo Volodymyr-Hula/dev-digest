@@ -70,7 +70,11 @@ export function FindingsTab({
   // PR-level severity filter: the bar counts live findings across every run;
   // picking a level narrows each run to it and hides runs without any.
   const [severityFilter, setSeverityFilter] = React.useState<Severity | null>(null);
-  const counts = React.useMemo(() => countBySeverity(runs.flatMap((r) => r.findings)), [runs]);
+  const counts = React.useMemo(
+    () => countBySeverity(runs.flatMap((r) => r.findings)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [runs.length],
+  );
   const findingsByRun = React.useMemo(
     () => new Map(runs.filter((r) => r.run_id).map((r) => [r.run_id!, r.findings])),
     [runs],
@@ -181,7 +185,7 @@ export function FindingsTab({
           })}
           {severityFilter && (
             <Button kind="ghost" size="sm" icon="X" onClick={() => setSeverityFilter(null)}>
-              {t("severity.filterReset")}
+              Show all
             </Button>
           )}
         </div>

@@ -19,6 +19,17 @@ import { lineLabel, sortBySeverity } from "@/lib/findings";
 import { POPOVER_MAX_ITEMS, POPOVER_WIDTH } from "./constants";
 import { s } from "./styles";
 
+const ACCENT: Record<string, string> = {
+  CRITICAL: "var(--crit)",
+  WARNING: "var(--warn)",
+  SUGGESTION: "var(--sugg)",
+};
+
+/** Rationales use `inline code` for identifiers — keep it readable in the preview. */
+function formatRationale(text: string): string {
+  return text.replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
 export function FindingsPopover({
   anchor,
   findings,
@@ -51,7 +62,14 @@ export function FindingsPopover({
         {live ? t("severity.popoverTitle", { count: live.length }) : t("severity.loading")}
       </div>
       {shown.map((f, i) => (
-        <div key={f.id} style={s.item(i === shown.length - 1 && more <= 0)}>
+        <div
+          key={f.id}
+          style={{
+            ...s.item(i === shown.length - 1 && more <= 0),
+            borderLeft: `2px solid ${ACCENT[f.severity] ?? "var(--border)"}`,
+            paddingLeft: 8,
+          }}
+        >
           <div style={s.titleRow}>
             <SeverityBadge severity={f.severity as Severity} compact />
             <span style={s.title}>{f.title}</span>
@@ -63,7 +81,7 @@ export function FindingsPopover({
             </span>
             <ConfidenceNum value={f.confidence} />
           </div>
-          <div style={s.rationale}>{f.rationale}</div>
+          <div style={s.rationale} dangerouslySetInnerHTML={{ __html: formatRationale(f.rationale) }} />
         </div>
       ))}
       {more > 0 && <div style={s.muted}>{t("severity.more", { count: more })}</div>}
