@@ -13,7 +13,7 @@ Each module has its own `CLAUDE.md`, plus `docs/`, `specs/` and `INSIGHTS.md`. R
 |------|------|
 | `server/` | `@devdigest/api` — Fastify API, Postgres, repo-intel indexer, review orchestration |
 | `client/` | `@devdigest/web` — Next.js studio |
-| `reviewer-core/` | `@devdigest/reviewer-core` — pure review engine (diff → prompt → LLM → grounded findings) |
+| `reviewer-core/` | `@devdigest/reviewer-core` — review engine |
 | `e2e/` | `@devdigest/e2e` — deterministic browser e2e |
 | `scripts/` | `dev.sh` (whole dev stack), `e2e.sh` (isolated e2e stack) |
 | `docs/agent-prompts/` | canonical reviewer-agent system prompts |
@@ -29,12 +29,12 @@ Node ≥ 22 · TypeScript 5.9 (`strict`, ESM, `moduleResolution: Bundler`) · zo
 - Four independent packages, no workspace: install, run and test inside each package directory.
 - Package manager follows the lockfile: **pnpm** in `server/` and `client/`, **npm** in `reviewer-core/` and `e2e/`.
 - Cross-package code is shared as TypeScript **source** through tsconfig path aliases, never published packages. `@devdigest/shared` (Zod contracts + adapter interfaces) physically lives in `server/src/vendor/shared`.
+- Git history starts at `92268dc9` (merge of PR #257, the starter backport); older commits are out of scope. Bound history queries to it: `git log 92268dc9..HEAD`, `git diff 92268dc9`.
 
 ## Gotchas
 
-- `client/src/vendor/shared` is a separate copy of the contracts and has already drifted from `server/src/vendor/shared`. Mirror every contract change into both.
+- `server/src/vendor/shared` is the contracts' source of truth. `reviewer-core` consumes it as source through a tsconfig alias; `client/src/vendor/shared` is a separate copy that has already drifted. A contract change affects all three packages: mirror it into the client copy.
 - Migrations are never applied on boot: run `pnpm db:migrate` in `server/` after pulling a new migration.
-- `docker compose down -v` deletes the `devdigest_pgdata` volume with every imported repo and review. Use `docker compose down`.
 - The API has no authentication and binds to loopback; keep it that way.
 - CI path filters encode cross-package aliases (e.g. `reviewer-core/**` triggers `server-unit`). A new alias needs matching `paths:` in `.github/workflows/*.yml`.
 

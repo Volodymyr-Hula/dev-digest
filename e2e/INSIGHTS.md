@@ -13,7 +13,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Tool & Library Notes
 <!-- dependency quirks, version-specific behaviour, CLI gotchas -->
-- **Match `wait --text` against the rendered text, not the i18n string** — CSS `text-transform: uppercase` on list headers makes `wait --text Cost` time out while `COST` passes. Evidence: `client/src/app/repos/[repoId]/pulls/styles.ts:105`; `✗ PR list has the COST column — Command failed: agent-browser wait --text Cost`. (2026-11-20)
+- Matching `wait --text` against CSS-uppercased text → promoted to [specs/flow-format.md](specs/flow-format.md) F8. (2026-11-20)
 
 ## Recurring Errors & Fixes
 <!-- exact error text → cause → fix -->
@@ -21,6 +21,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-20 — dedupe → promoted the CSS-uppercase entry to `specs/flow-format.md` F8.
 - 2026-11-20 — cost badge e2e step → CSS-uppercase text match, agent-browser node-version workaround, 05 flake question.
 
 ## Open Questions

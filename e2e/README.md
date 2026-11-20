@@ -23,28 +23,13 @@ A flow lives in `flows/NN-name.flow.json`:
 }
 ```
 
-- `{BASE}` is replaced with `E2E_BASE_URL` (default `http://localhost:13000`).
-- Each `cmd` is passed verbatim to `agent-browser`. A non-zero exit fails the
-  step and the flow — so `wait --text` / `wait --url` **are** the assertions
-  (they time out and exit non-zero if the condition never holds).
-- Optional `"assert": { "stdoutIncludes": "…" }` adds a substring check on the
-  command's stdout.
-- Locators are deterministic only (`--url`, `--text`, `find role|text|label`).
-  We never use the AI `chat` command, so runs are stable and key-free.
+Fields, step kinds, `{BASE}` substitution and failure semantics are specified in
+[`specs/flow-format.md`](specs/flow-format.md). The seeded data the flows read is
+in [`specs/seed-fixtures.md`](specs/seed-fixtures.md).
 
-Flows target **read-only seeded data** (the demo repo `acme/payments-api`, PR
-#482, the seeded agents), so nothing triggers a model call.
-
-> **Precondition: a freshly-seeded DB.** Flow `02` follows the home redirect to
-> the *first* repo, so it assumes the seeded demo repo is the only one. CI
-> guarantees this — `e2e-web.yml` brings up an empty Postgres and seeds it.
-> Your local dev DB usually has other imported repos, so running `npm test`
-> straight against it makes flows 02/04/05 land on the wrong repo and fail.
-> **Use the hermetic runner below** — it spins up its own isolated, freshly-seeded
-> stack and leaves your dev DB untouched.
->
-> ⚠️ **Never `docker compose down -v` to "reset" your dev DB** — `-v` deletes the
-> `devdigest_pgdata` volume along with every real repo and review you've imported.
+> **Precondition: a freshly seeded DB where the demo repo is the only repo**
+> ([S1](specs/seed-fixtures.md#preconditions)). Your dev DB usually fails this,
+> so use the hermetic runner below.
 
 ## Run locally
 
@@ -57,7 +42,7 @@ npm i -g agent-browser && agent-browser install
 
 ```sh
 # Boots an isolated, freshly-seeded stack on alternate ports
-# (Postgres :5433, API :3101, web :3100), runs the flows, then tears it all
+# (see env knobs below), runs the flows, then tears it all
 # down. Safe to run while your normal dev stack is up — it never touches your
 # dev DB or the devdigest_pgdata volume.
 ./scripts/e2e.sh
@@ -74,7 +59,7 @@ Only safe if your dev DB contains *only* the seeded repo (see precondition
 above). Otherwise prefer the hermetic runner.
 
 ```sh
-./scripts/dev.sh          # Postgres + API :13001 + web :13000 (seeded)
+./scripts/dev.sh          # dev stack (seeded)
 cd e2e && npm install && npm test
 ```
 
@@ -86,17 +71,6 @@ Env knobs:
   `E2E_WEB_PORT` (3100), `E2E_PG_CONTAINER` (`devdigest-e2e-postgres`),
   `E2E_PG_IMAGE` (`pgvector/pgvector:pg16`).
 
-Failure screenshots are written to `e2e/test-results/` (git-ignored; uploaded as
-a CI artifact by `.github/workflows/e2e-web.yml`).
+## Coverage
 
-## Coverage (typological, not exhaustive)
-
-| Flow file | Journey |
-|------|------|
-| `01-app-boot` | root → redirect to first repo's PR list → seeded PR #482 |
-| `02-repo-pulls-detail` | PR list → open PR #482 → review detail route |
-| `03-agents` | agents list renders the seeded reviewer agents |
-| `04-pr-findings` | PR #482 → Agent runs tab → seeded run verdict + findings; expand → FindingCard |
-| `05-pr-diff` | PR #482 → Files changed tab → seeded file renders in the diff viewer |
-| `06-onboarding` | `/onboarding` → add-repository form renders (no submit) |
-| `07-settings` | `/settings/api-keys` + `/settings/models` → section titles render |
+Which flow covers which journey: [`specs/coverage.md`](specs/coverage.md).

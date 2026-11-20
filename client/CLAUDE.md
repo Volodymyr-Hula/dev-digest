@@ -27,15 +27,13 @@ Next.js 15.5 (App Router) · React 19 · TanStack Query 5 · Tailwind 4 · next-
 
 ## Gotchas
 
-- `src/vendor/shared` has drifted from `server/src/vendor/shared` (the source of truth). Sync the touched contract file before relying on it.
 - `apiFetch` sets `content-type: application/json` only when a body is sent — Fastify rejects an empty JSON body on body-less POST/PUT.
-- The API's CORS allows only the origin derived from `WEB_PORT` in `server/.env`; running the client on another port needs that value changed.
 
 ## Pointers
 
-- Read when you need the route map or which endpoints a page calls: [README.md](README.md)
 - Read when adding or changing a design-system component: [src/vendor/ui/README.md](src/vendor/ui/README.md)
 - Read when writing or running tests: [../TESTING.md](../TESTING.md)
-- Read when you need design notes or how-tos for this module: [docs/](docs/)
-- Read when implementing or changing a feature here: [specs/](specs/)
+- Read when you need Server vs Client Component boundaries, the providers tree, data flow, query keys/invalidation, SSE live runs, i18n or the component-folder rationale: [docs/ui-architecture.md](docs/ui-architecture.md)
+- Read when adding or changing a route, or you need a page's hooks, endpoints, URL state or loading/empty/error states: [specs/pages.md](specs/pages.md)
+- Read when touching `apiFetch`/`ApiError`, request headers or how HTTP errors reach toasts and inline states: [specs/api-client.md](specs/api-client.md)
 - Read before starting work here and update at the end of the task, via the `engineering-insights` skill: [INSIGHTS.md](INSIGHTS.md)

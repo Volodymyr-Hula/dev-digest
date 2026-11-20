@@ -16,6 +16,7 @@ aliases, not published modules):
 | `reviewer-core/` | `@devdigest/reviewer-core`  | Pure review engine: diff → prompt → LLM → findings    | —    |
 | `e2e/`           | `@devdigest/e2e`            | Deterministic browser e2e (agent-browser)             | —    |
 | `server/src/vendor/shared` | `@devdigest/shared` | Zod contracts shared across every package             | —    |
+| `docker-compose.yml` | — | Postgres 16 + pgvector (the only containerised service) | 55432 |
 
 `repo-intel` (the codebase indexer that powers the **Indexed** badge and feeds
 project context into reviews) lives inside the server at
@@ -70,7 +71,7 @@ Each package has its own README with deeper diagrams:
 - **Add repository** — paste a repo URL; the server clones and indexes it.
 - **Import pull requests** — pull open PRs and their diff, commits, body, and linked issue.
 - **View diff** — GitHub-like diff in the browser.
-- **Agents** — two built-in reviewers (General + Security); create/edit your own (model + system prompt).
+- **Agents** — built-in reviewers (seeded by `server/src/db/seed.ts`); create/edit your own (model + system prompt).
 - **Run a review** — single-pass analysis returning structured findings (severity + score), with the grounding gate and repo-map context working from the start.
 
 ## Roadmap
@@ -90,7 +91,7 @@ These are intentionally **not** in the starter — each milestone adds one back:
 
 ## Prerequisites
 
-- **Node** ≥ 22 · **pnpm** ≥ 10 (`npm i -g pnpm`) · **Docker** (for Postgres)
+- **Node** ≥ 22 · **pnpm** 10 (`npm i -g pnpm@10`; ≥ 11 breaks installs, see [INSIGHTS.md](INSIGHTS.md)) · **Docker** (for Postgres)
 
 ## Quick start (from zero)
 
@@ -103,9 +104,9 @@ This script:
 2. creates `server/.env` and `client/.env` from `.env.example` if missing,
 3. installs deps in `server/` and `client/` (only when `node_modules` is absent),
 4. applies DB migrations and seeds demo data,
-5. launches the API (`:13001`) and the web app (`:13000`).
+5. launches the API and the web app (ports: table above).
 
-Open **http://localhost:13000**. Press **Ctrl-C** to stop the dev servers —
+Open the web app in a browser. Press **Ctrl-C** to stop the dev servers —
 Postgres keeps running (`docker compose down` to stop it).
 
 Flags: `--no-seed` · `--no-client` · `--db-only` · `--help`.
@@ -121,44 +122,32 @@ docker compose up -d                                   # Postgres + pgvector
 cd server && pnpm install
 pnpm db:migrate          # apply migrations (NOT run automatically on boot)
 pnpm db:seed             # idempotent demo data (optional)
-pnpm dev                 # API on :13001
+pnpm dev                 # API
 
-cd ../client && pnpm install && pnpm dev               # web on :13000
+cd ../client && pnpm install && pnpm dev               # web app
 ```
 
 ## Useful scripts
 
 `server/`: `dev` · `build` · `db:migrate` · `db:seed` · `db:generate` · `test` · `typecheck`
-(unit/integration split: `pnpm exec vitest run --exclude '**/*.it.test.ts'` / `pnpm exec vitest run .it.test`)
 `client/`: `dev` · `build` · `start` · `test` · `typecheck`
 
 ## Testing & CI
 
-One test suite per package, each gated by its own GitHub Actions workflow with a
-path filter — full strategy in **[`TESTING.md`](TESTING.md)**.
-
-| Suite | Workflow | Needs Docker |
-|-------|----------|--------------|
-| client (vitest + jsdom) | `client.yml` | no |
-| server unit (hermetic) | `server-unit.yml` | no |
-| server integration (real Postgres) | `server-integration.yml` | yes |
-| reviewer-core (engine) | `reviewer-core.yml` | no |
-| web e2e (agent-browser, real stack) | `e2e-web.yml` | yes |
-
-Server tests split by filename: `*.it.test.ts` are DB-backed (testcontainers
-Postgres); everything else is hermetic. The browser e2e flows live in
-[`e2e/`](e2e/README.md) and run deterministically (no LLM).
+One test suite per package, each gated by its own path-filtered GitHub Actions
+workflow. Suite map, test lanes and local commands: **[`TESTING.md`](TESTING.md)**.
 
 ## Troubleshooting
 
 - **`relation ... does not exist` / API errors on first run** — migrations weren't
   applied. The server does **not** migrate on boot: run `cd server && pnpm db:migrate`.
-- **Port 55432 already in use** — another Postgres is running. Stop it, or change the
+- **Postgres port already in use** — another Postgres is running. Stop it, or change the
   host port in `docker-compose.yml`.
 - **`vector` type errors** — the pgvector extension is enabled by migration `0000`;
   make sure migrations ran against the Dockerized DB, not a different one.
-- **Reset everything** — `docker compose down -v` drops the volume, then re-run
-  `./scripts/dev.sh`.
+- **Need a clean DB** — run `./scripts/e2e.sh`, which boots its own throwaway
+  Postgres. `docker compose down -v` deletes the `devdigest_pgdata` volume with
+  every imported repo and review; do it only when you really mean to wipe it.
 
 ## License
 

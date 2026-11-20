@@ -11,6 +11,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 ## Codebase Patterns
 <!-- unwritten conventions and architectural decisions, with the reason -->
 - **Change the web port in `client/package.json` (`next dev -p` / `next start -p`), not in `client/.env`** — no client code reads `WEB_PORT`; `client/.env` keeps it only to mirror `server/.env`, where it sets the API's CORS origin. Keep all three equal. Evidence: `client/package.json:7`; `grep -rn WEB_PORT client` hits only `.env*` and CLAUDE.md. (2026-11-19)
+- **Run `./scripts/e2e.sh` locally after a `reviewer-core`-only change** — `.github/workflows/e2e-web.yml` `paths:` (`:14-24`) omit `reviewer-core/**`, yet the API imports reviewer-core source at runtime (comment at `:73-81`), so CI never runs e2e for such a change. Alternatively, add the filter (root `CLAUDE.md` Gotchas: CI path filters). Evidence: `.github/workflows/e2e-web.yml:14-24`. (2026-11-20)
 - **After changing a default in `server/.env.example` or `client/.env.example`, update existing `.env` files by hand** — `dev.sh` copies the example only when `.env` is missing, and `.env` beats the code defaults, so a stale `DATABASE_URL=…:5432` kept pointing at another project's Postgres after the move to 55432. Evidence: `scripts/dev.sh:42`. (2026-11-19)
 
 ## Tool & Library Notes
@@ -23,6 +24,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-20 — module docs/specs + cross-file dedupe → moved e2e CI path-filter gap here from `e2e/docs/architecture.md`.
 - 2026-11-20 — split insights into root (cross-module) + per-module → moved pnpm, `.env`, Postgres-port and `WEB_PORT` entries here from `server/` and `client/`.
 - 2026-11-20 — dev boot failed on pnpm 12 → pnpm-10-only rule.
 - 2026-11-19 — moved dev ports to Postgres 55432 / API 13001 / web 13000 → stale-container recreate fix, `.env` not refreshed by `dev.sh`, `WEB_PORT` not read by Next.

@@ -6,44 +6,11 @@ and author agents. App Router + React Server/Client components, data via
 later milestones add the Skills, Memory, Eval, Blast/Brief, multi-agent, CI, and
 dashboard screens.)
 
-- **Stack:** Next.js 15 (App Router), React 19, TanStack Query, `next-intl`
-  (messages in `messages/<locale>/*.json`), `recharts`, `mermaid`,
-  `react-markdown`. UI primitives are vendored under `src/vendor/ui`
-  (`@devdigest/ui`) and shared Zod contracts under `src/vendor/shared`
-  (`@devdigest/shared`).
-- **API base:** `NEXT_PUBLIC_API_BASE` (default `http://localhost:13001`), used by
-  `src/lib/api.ts`. Every data hook lives in `src/lib/hooks/*`.
-- **Run:** `pnpm dev` (`:13000`). **Test:** `pnpm test` (vitest + jsdom, fetch
-  mocked — no API needed). **Typecheck:** `pnpm typecheck`.
+- **API base:** `NEXT_PUBLIC_API_BASE` ([api-client spec](specs/api-client.md#base-url)).
+- **Run:** `pnpm dev`. **Test:** `pnpm test`. **Typecheck:** `pnpm typecheck`.
 
-## UI route map
+## Further reading
 
-Routes (`src/app/**/page.tsx`) and the API surface each leans on (via
-`src/lib/hooks/*` → `src/lib/api.ts`):
-
-```mermaid
-flowchart TD
-  ROOT["/"] -->|"useRepos → GET /repos"| PULLS["/repos/:repoId/pulls<br/>PR list"]
-  ONB["/onboarding<br/>add repo"] -->|"POST /repos"| API[("Fastify API")]
-  PULLS --> PR["/pulls/:number<br/>review detail<br/>(overview · diff · findings)"]
-
-  AGENTS["/agents"] --> AGENT["/agents/:id<br/>editor (config)"]
-  SETTINGS["/settings/:section<br/>API keys · models"]
-
-  PULLS -->|"GET /repos/:id/pulls · /repos/:id/index-state"| API
-  PR -->|"GET /pulls/:id · /reviews · /pulls/:id/comments<br/>POST /pulls/:id/review · /findings/:id/(accept|dismiss)"| API
-  AGENTS -->|"/agents · /agents/:id"| API
-  SETTINGS -->|"/settings · /providers"| API
-```
-
-Cross-cutting chrome lives in `src/components/app-shell` (nav, breadcrumbs,
-`g`-then-key shortcuts). Pages are thin; feature logic sits in colocated
-`_components/<Name>/` folders, each with its own `*.test.tsx`.
-
-## Testing
-
-Component/interaction tests (`*.test.tsx`) run under vitest + jsdom with `fetch`
-mocked, so they need neither the API nor a browser. The real browser journeys
-(client + API + seeded DB) are covered by the deterministic agent-browser suite
-in [`../e2e`](../e2e/README.md) and the `e2e-web.yml` workflow. See
-[`../TESTING.md`](../TESTING.md).
+- Routes, the endpoints each page calls, and page states: [`specs/pages.md`](specs/pages.md)
+- Server/Client boundaries, providers, data flow, live runs: [`docs/ui-architecture.md`](docs/ui-architecture.md)
+- Tests: [`../TESTING.md`](../TESTING.md)
