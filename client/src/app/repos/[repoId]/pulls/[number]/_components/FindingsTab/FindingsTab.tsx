@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Icon, Badge, Button, SectionLabel, EmptyState } from "@devdigest/ui";
 import { RunStatus } from "../RunStatus";
 import { RunHistory } from "../RunHistory/RunHistory";
@@ -61,6 +62,11 @@ export function FindingsTab({
       onDelete(id);
     },
     [onDelete],
+  );
+
+  const findingsByRun = React.useMemo(
+    () => new Map(runs.filter((r) => r.run_id).map((r) => [r.run_id!, r.findings])),
+    [runs],
   );
 
   // Timeline → Review-runs navigation: clicking an agent name in the timeline
@@ -134,6 +140,7 @@ export function FindingsTab({
             onOpenTrace={handleOpenTrace}
             onGoToReview={handleGoToReview}
             onDelete={handleDelete}
+            findingsByRun={findingsByRun}
           />
         </div>
       )}

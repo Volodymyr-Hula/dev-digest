@@ -266,6 +266,53 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     expect(byId.get(pr.id)).toMatchObject({ cost_usd: 0.001 });
     expect(byId.get(unreviewed!.id)).toMatchObject({ cost_usd: null, score: null });
 
+    // PR list cost = sum over every successful run; failed runs are excluded.
+    await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } });
+    await waitForPrRuns(pg.handle.db, pr.id, { expected: 2 });
+    await pg.handle.db
+      .insert(t.agentRuns)
+      .values({ workspaceId, prId: pr.id, status: 'failed', costUsd: 5 });
+    const list2 = (await app.inject({ method: 'GET', url: `/repos/${repo.id}/pulls` })).json();
+    const pr2 = list2.find((p: { id: string }) => p.id === pr.id);
+    expect(pr2.cost_usd).toBeCloseTo(0.002, 10);
+
+    await app.close();
+  });
+
+  it('PR list: severity_counts tally the latest review and skip dismissed findings', async () => {
+    const app = await buildApp({
+      config: config(),
+      db: pg.handle.db,
+      overrides: {
+        embedder: new MockEmbedder(),
+        git: new MockGitClient({ diff: DIFF }),
+        github: new MockGitHubClient({ pulls: [] }),
+        llm: { openai: new MockLLMProvider('openai', { structured: REVIEW_FIXTURE }) },
+      },
+    });
+    const { repo, pr } = await setupRepoAndPr(pg.handle.db, workspaceId);
+    const agent = (
+      await app.inject({
+        method: 'POST',
+        url: '/agents',
+        payload: { name: 'Sev', provider: 'openai', model: 'gpt-4.1', system_prompt: 's' },
+      })
+    ).json();
+    await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } });
+    await waitForPrRuns(pg.handle.db, pr.id, { expected: 1 });
+
+    const listPr = async () =>
+      (await app.inject({ method: 'GET', url: `/repos/${repo.id}/pulls` }))
+        .json()
+        .find((p: { id: string }) => p.id === pr.id);
+
+    // Grounding drops the line-999 WARNING, so only the CRITICAL survives.
+    expect((await listPr()).severity_counts).toEqual({ critical: 1, warning: 0, suggestion: 0 });
+
+    const [review] = (await app.inject({ method: 'GET', url: `/pulls/${pr.id}/reviews` })).json();
+    await app.inject({ method: 'POST', url: `/findings/${review.findings[0].id}/dismiss` });
+    expect((await listPr()).severity_counts).toEqual({ critical: 0, warning: 0, suggestion: 0 });
+
     await app.close();
   });
 

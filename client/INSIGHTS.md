@@ -16,9 +16,12 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Recurring Errors & Fixes
 <!-- exact error text → cause → fix -->
+- **Use `getAllByText`/`queryAllByText` for an agent name in tests that render an open `ReviewRunAccordion`** — the name shows in the accordion header and again in `VerdictBanner` (`agentName`), so `getByText` throws `Found multiple elements with the text`. Evidence: `src/app/repos/[repoId]/pulls/[number]/_components/ReviewRunAccordion/ReviewRunAccordion.tsx:93` (header) + `VerdictBanner/VerdictBanner.tsx:46-50` (badge). (2026-11-20)
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-20 — split severity counter row from filter buttons, Dismiss→Reject label → `file:line` evidence on the duplicate agent-name entry.
+- 2026-11-20 — severity counters + filter on PR page, timeline, PR list → duplicate agent-name test query.
 
 ## Open Questions
 <!-- unverified hypotheses and unresolved items; move out once answered -->

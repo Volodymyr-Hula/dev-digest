@@ -16,39 +16,15 @@ in the DB). The canonical, reviewable copies live next to this file:
 
 ## How a prompt is assembled
 
-Assembly happens in `reviewer-core/src/prompt.ts` (`assemblePrompt`). The model
-receives exactly two messages:
+Your `system_prompt` becomes the system message, followed by a fixed
+`INJECTION_GUARD` that the engine appends on every run. All PR and repo context
+goes into the user message, and the repo- and author-derived parts are wrapped as
+`<untrusted>` data. So your prompt never needs to restate the anti-injection rule,
+and it should not describe the context layout.
 
-**System message** = your agent prompt **+** a fixed injection guard:
-
-```
-<your system_prompt>
-
-<INJECTION_GUARD>   // appended verbatim to EVERY agent, every run
-```
-
-`INJECTION_GUARD` (`prompt.ts:16`) tells the model that everything inside
-`<untrusted>…</untrusted>` is data, never instructions, and that claims like "test
-fixture / not for production / ignore this" never descope the review. You do not
-need to repeat any of this in your prompt — it is always there.
-
-**User message** = the task and all context, in this order, each untrusted block
-delimiter-wrapped (`prompt.ts:104-122`):
-
-```
-<task line, e.g. "Review PR #7 '…'">
-## PR description        (untrusted, author-controlled, truncated to 4000 chars)
-## Skills / rules        (linked skill bodies)
-## Relevant memory       (curated memory items)
-## Repo skeleton         (untrusted, repo-derived)
-## Project context       (untrusted spec chunks)
-## Callers of changed symbols  (untrusted, repo-derived)
-## Diff to review        (untrusted)
-```
-
-Sections with no content are omitted. Everything repo- or author-derived is wrapped
-in `<untrusted source="…">…</untrusted>` so the model can tell instructions
-(system) from data (user).
+The exact message layout, section order, wrapping and truncation rules are in
+[`reviewer-core/specs/prompt-and-structured-output.md`](../../reviewer-core/specs/prompt-and-structured-output.md);
+the design reasons are in [`reviewer-core/docs/pipeline.md`](../../reviewer-core/docs/pipeline.md#prompt-assembly-and-the-injection-guard).
 
 ## The output schema is NOT in the prompt
 
@@ -102,31 +78,21 @@ numbers and gates from what the model returns:
 
 ## How the engine uses the output (why the conventions matter)
 
-`reviewer-core/src/review/run.ts` + `reduce.ts`:
+What this means for a prompt author:
 
-- **`score` is recomputed**, never trusted from the model:
-  `scoreFromFindings(grounded)` (`reduce.ts:27`). 0 findings ⇒ 100; each CRITICAL
-  −35, WARNING −12, SUGGESTION −3. So the number on screen always matches the
-  findings list. The model's self-reported score is ignored.
-- **Findings are citation-grounded**: a finding whose line range doesn't intersect a
-  real diff hunk is dropped (`grounding.ts`). Cite real `file:line` from the diff or
-  the finding disappears.
-- **`verdict` is currently passed through from the model** (`run.ts:208`). That is
-  why a wrong verdict reaches the UI unchanged — and why the verdict convention
-  above is load-bearing until/unless the verdict is also derived deterministically.
+- **Severities drive the number.** The engine ignores the model's `score` and
+  recomputes it from the surviving findings' severities. Inflated severities
+  therefore mean a lower score and more blockers.
+- **Cite real diff lines.** A finding whose range does not touch the diff is
+  dropped by the grounding gate before it is persisted.
+- **The verdict is load-bearing.** The engine passes the model's `verdict` through
+  unchanged, so the verdict convention above is the only thing keeping it right.
+- **The CI gate ignores the verdict.** It is decided from finding severities
+  (`agents.ciFailOn`, default `critical`), so honest severities keep it working.
 
-## Severity / verdict / gate at a glance
-
-| Model returns | Engine does |
-|---|---|
-| `findings[].severity` | recompute `score`; count CRITICAL as blockers |
-| `score` | **ignored** — recomputed from findings |
-| `verdict` | passed through to the review record (shown in the UI) |
-| `findings[]` | citation-grounded; ungrounded ones dropped |
-
-The per-agent merge gate (`agents.ciFailOn`, default `critical`) decides when a CI
-review **blocks**: it is deterministic from finding severities, independent of the
-model's `verdict`. Keep your severities honest and the gate behaves.
+The exact rules (penalty weights, grounding, verdict passthrough, gate thresholds)
+are in [`reviewer-core/specs/review-contract.md`](../../reviewer-core/specs/review-contract.md)
+and [`reviewer-core/specs/grounding.md`](../../reviewer-core/specs/grounding.md).
 
 ## Checklist before shipping a prompt
 

@@ -3,7 +3,10 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Icon, CircularScore, type IconName } from "@devdigest/ui";
-import type { RunSummary, PrCommit } from "@devdigest/shared";
+import type { FindingRecord, RunSummary, PrCommit } from "@devdigest/shared";
+import { SeverityCounts } from "@/components/severity-counts";
+import { countBySeverity, totalCount } from "@/lib/findings";
+import { formatRunCost } from "@/lib/format";
 
 /**
  * PR timeline — every agent run interleaved with the PR's commits, newest-first
@@ -90,8 +93,12 @@ export function RunHistory({
   onOpenTrace,
   onGoToReview,
   onDelete,
+  findingsByRun,
 }: {
   runs: RunSummary[];
+  /** Findings of the review each run produced (by run_id) — drives the live
+   *  per-severity counters + popover. Runs without an entry fall back to text. */
+  findingsByRun?: Map<string, FindingRecord[]>;
   commits?: PrCommit[];
   /** Open the trace + log drawer for a run (the logs icon). */
   onOpenTrace: (runId: string) => void;
@@ -189,14 +196,27 @@ export function RunHistory({
                 </div>
               )}
               {settled && (
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  {t("runStatus.findings", { count: r.findings_count ?? 0 })}
+                <div style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
+                  {(() => {
+                    const f = findingsByRun?.get(r.run_id);
+                    const counts = f ? countBySeverity(f) : null;
+                    return counts && totalCount(counts) > 0 ? (
+                      <SeverityCounts counts={counts} popover findings={f} />
+                    ) : (
+                      t("runStatus.findings", { count: r.findings_count ?? 0 })
+                    );
+                  })()}
                   {(r.blockers ?? 0) > 0 ? t("runStatus.blockers", { count: r.blockers ?? 0 }) : ""}
                 </div>
               )}
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
               {r.ran_at && <span>{new Date(r.ran_at).toLocaleTimeString()}</span>}
+              {settled && (
+                <span className="mono" title={t("verdict.costTitle")} data-testid="timeline-run-cost">
+                  {formatRunCost(r.cost_usd, r.tokens_in, r.tokens_out)}
+                </span>
+              )}
             </div>
             <button
               type="button"
