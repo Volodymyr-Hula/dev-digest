@@ -49,12 +49,12 @@ drives routes end-to-end: reviews + run lifecycle (incl. grounding), agents CRUD
 repo-intel symbol clamping, pulls comments, settings models. They self-skip when
 Docker is unavailable.
 
-**reviewer-core** — the pure engine: `toReview` selection, prompt construction,
-and a `run` with a stubbed model → grounded findings. No DB / GitHub / FS.
+**reviewer-core** — the pure engine: `toReviewPayload` selection, prompt
+construction, and a `reviewPullRequest` with a stubbed model → grounded findings.
+No DB / GitHub / FS.
 
-**e2e web** — see `e2e/README.md`. Deterministic agent-browser flows over the
-main journeys (boot → PR list → PR detail; agents) against a real seeded stack.
-No `chat`, no model key.
+**e2e web** — deterministic agent-browser flows over the main journeys against a
+real seeded stack, no model key. Flow map: [`e2e/specs/coverage.md`](e2e/specs/coverage.md).
 
 ## Running locally
 
@@ -68,11 +68,11 @@ cd server && pnpm exec vitest run --exclude '**/*.it.test.ts'   # unit, no Docke
 cd server && pnpm exec vitest run .it.test                      # integration, needs Docker
 cd server && pnpm test                                          # both
 
-# browser e2e (needs the full stack + agent-browser CLI)
-./scripts/dev.sh
-npm i -g agent-browser && agent-browser install
-cd e2e && npm install && npm test
+# browser e2e — isolated, freshly seeded stack (needs the agent-browser CLI)
+./scripts/e2e.sh
 ```
+
+Other e2e run modes and their precondition: [`e2e/README.md`](e2e/README.md#run-locally).
 
 ## Conventions
 
@@ -86,8 +86,8 @@ cd e2e && npm install && npm test
   `test:integration` scripts.
 - **Hermetic by default.** Reach for `src/adapters/mocks.ts` (MockLLMProvider,
   MockGitClient) rather than real network/keys.
-- **E2E flows are deterministic batch JSON** (`e2e/flows/*.flow.json`) using
-  only `--url` / `--text` / `find` locators — never the AI `chat` command.
+- **E2E flows are deterministic batch JSON** — format and locator rules:
+  [`e2e/specs/flow-format.md`](e2e/specs/flow-format.md).
 - **CI is path-filtered per package.** Cross-package source aliases are encoded
   in each workflow's `paths:` (e.g. `reviewer-core/**` triggers `server-unit`
   because the server type-checks against `../reviewer-core/src`).

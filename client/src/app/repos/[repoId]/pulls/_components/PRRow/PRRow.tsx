@@ -8,6 +8,9 @@ import { Icon, Avatar, Badge, CircularScore } from "@devdigest/ui";
 import type { PrMeta } from "@/lib/types";
 import { SIZE_COLOR, STATUS_META } from "../../constants";
 import { formatUsd } from "@/lib/format";
+import { totalCount } from "@/lib/findings";
+import { usePrReviews } from "@/lib/hooks/reviews";
+import { SeverityCounts } from "@/components/severity-counts";
 import { relativeTime, sizeOf } from "../../helpers";
 import { s } from "../../styles";
 
@@ -18,6 +21,11 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
   const st = STATUS_META[pr.status] ?? STATUS_META.needs_review!;
   const { size, lines } = sizeOf(pr);
   const reviewed = pr.score != null; // null score ⇒ PR has never been reviewed
+  // Popover findings load on first hover only — the list payload carries counts.
+  const [wantFindings, setWantFindings] = React.useState(false);
+  const { data: reviews } = usePrReviews(wantFindings ? pr.id : null);
+  const latestFindings = reviews?.find((r) => r.kind === "review")?.findings;
+  const counts = pr.severity_counts;
   return (
     <div
       onMouseEnter={() => setH(true)}
@@ -50,6 +58,18 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
       <div style={s.scoreCell}>
         {reviewed ? (
           <CircularScore score={pr.score!} size={34} stroke={3} />
+        ) : (
+          <span style={s.muted}>—</span>
+        )}
+      </div>
+      <div>
+        {counts && totalCount(counts) > 0 ? (
+          <SeverityCounts
+            counts={counts}
+            popover
+            findings={wantFindings ? (reviews ? latestFindings ?? [] : undefined) : undefined}
+            onOpenChange={(open) => open && setWantFindings(true)}
+          />
         ) : (
           <span style={s.muted}>—</span>
         )}

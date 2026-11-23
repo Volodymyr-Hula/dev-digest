@@ -1,6 +1,6 @@
 /* FindingCard — ported from findings.jsx (createElement → TSX).
    Severity icon+label, category, file:line, confidence, markdown rationale +
-   suggestion, accept/dismiss actions. Accept/dismiss reflect persisted
+   suggestion, Accept/Reject actions (Reject = the `dismiss` action). Both reflect persisted
    timestamps. */
 "use client";
 

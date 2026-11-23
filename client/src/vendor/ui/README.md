@@ -6,10 +6,10 @@ themed entirely through CSS variables.
 ## Usage
 
 ```tsx
-// once, at the app root (e.g. app/layout.tsx):
-import "@devdigest/ui/styles.css";
+// stylesheet: imported once from src/app/globals.css
+//   @import "../vendor/ui/styles.css";
 
-// anywhere:
+// components, anywhere:
 import { Button, Card, SeverityBadge, LineChart } from "@devdigest/ui";
 ```
 
@@ -52,9 +52,9 @@ you just need the rendered chip.
 
 ## Showcase
 
-Every component is rendered (in both themes) by the **`/showcase`** route
-(`src/components/showcase/Showcase.tsx`). The smoke test
-(`src/test/smoke.test.tsx`) mounts that gallery, so a broken export or render
+Every component is rendered (in both themes) by the gallery in
+`src/components/showcase/Showcase.tsx`. There is no `/showcase` route; the smoke
+test (`src/test/smoke.test.tsx`) mounts the gallery, so a broken export or render
 fails CI. When you add or change a component, add it to the showcase.
 
 ## Conventions

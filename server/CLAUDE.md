@@ -27,13 +27,11 @@ Fastify 5 + `fastify-type-provider-zod` · Drizzle ORM 0.45 / drizzle-kit 0.31 /
 - Validate with zod schemas on the route `schema` (`withTypeProvider<ZodTypeProvider>()`); the handler receives already-parsed input.
 - Throw `AppError` subclasses from `src/platform/errors.ts`; the global handler maps them to the error envelope.
 - Read secrets only via `SecretsProvider` (`container.secrets`); `AppConfig` holds non-secret config.
-- A test that touches Postgres is named `*.it.test.ts`. Everything else stays hermetic using `src/adapters/mocks.ts` + `ContainerOverrides`.
 
 ## Gotchas
 
 - `src/platform/{grounding,structured,prompt}.ts` are re-exports of `reviewer-core`; change the logic in `reviewer-core/src`.
 - The DB schema already holds tables for future milestones (eval, ci, plugins, onboarding, …). Empty tables are expected; keep them.
-- `src/vendor/shared` is also consumed by `reviewer-core` (alias to `../server`) and copied into `client/src/vendor/shared`. A contract change affects all three.
 - Duplicate zod module instances make `instanceof ZodError` unreliable; match by shape, as `app.ts` does.
 - `reapStaleRuns` on boot marks every `running` run as orphaned — valid only with a single API instance per DB.
 - The global rate limit is off under `NODE_ENV=test`; per-route limits still apply.
@@ -41,10 +39,12 @@ Fastify 5 + `fastify-type-provider-zod` · Drizzle ORM 0.45 / drizzle-kit 0.31 /
 
 ## Pointers
 
-- Read when you need the API map, env vars, the request/DI flow or how review context is assembled: [README.md](README.md)
+- Read when you need the API map, env vars or the request flow diagram: [README.md](README.md)
 - Read when touching indexing or the `repoIntel` facade: [src/modules/repo-intel/README.md](src/modules/repo-intel/README.md)
 - Read when changing prompt assembly, grounding or the review pipeline: [../reviewer-core/CLAUDE.md](../reviewer-core/CLAUDE.md)
 - Read when writing or running tests: [../TESTING.md](../TESTING.md)
-- Read when you need design notes or how-tos for this module: [docs/](docs/)
-- Read when implementing or changing a feature here: [specs/](specs/)
+- Read when you need the boot order, DI container/overrides, adapters and mocks, module layering, `JobRunner`, the SSE run bus or why the host/origin guard exists: [docs/architecture.md](docs/architecture.md)
+- Read when changing the review cycle (run creation, executor, grounding, scoring, persistence, cancel/reaper, SSE, cost): [specs/review-flow.md](specs/review-flow.md)
+- Read when changing repo import, PR sync/polling, PR detail or the `needs_review`/`reviewed`/`stale` status: [specs/pr-import.md](specs/pr-import.md)
+- Read when changing error handling, status codes, the host/origin guard, rate limits or health routes: [specs/api-error-envelope.md](specs/api-error-envelope.md)
 - Read before starting work here and update at the end of the task, via the `engineering-insights` skill: [INSIGHTS.md](INSIGHTS.md)

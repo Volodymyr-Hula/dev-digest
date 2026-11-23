@@ -1,13 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { and, desc, eq, inArray } from 'drizzle-orm';
-import type { PrMeta, PrDetail, GitHubClient, PrReviewComment } from '@devdigest/shared';
+import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import type { PrMeta, PrDetail, GitHubClient, PrReviewComment, SeverityCounts } from '@devdigest/shared';
 import { PrCommentInput } from '@devdigest/shared';
 import * as t from '../../db/schema.js';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { AppError, NotFoundError } from '../../platform/errors.js';
-import { deriveReviewStatus } from './status.js';
+import { deriveReviewStatus, rollupSeverities } from './status.js';
 
 /**
  * F1 — pulls module. PR import via Octokit (list + per-PR detail).
@@ -111,24 +111,51 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       }
     }
 
-    // Latest-review SCORE + COST per PR for the list. Computed on read from
-    // reviews (no FK denorm); the list is small, so one IN-query + JS grouping
-    // is cheap. Cost is the snapshot stored on the run that produced that
-    // review. (The per-severity FINDINGS breakdown is intentionally not
-    // surfaced on the list — findings live on the PR detail page.)
+    // Latest-review SCORE + FINDINGS breakdown, and total COST per PR for the list.
+    // Computed on read (no FK denorm); the list is small, so IN-queries + JS
+    // grouping are cheap. Cost is the sum of the snapshots stored on every
+    // successful (status='done') run of the PR; null when none has a cost.
+    // Severity counts skip dismissed findings, so they track triage live
+    // (unlike agent_runs.blockers, a run-time snapshot).
     const prIds = rows.map((r) => r.id);
-    const latestReviewByPr = new Map<string, { score: number | null; costUsd: number | null }>();
+    const latestReviewByPr = new Map<
+      string,
+      { id: string; score: number | null; counts?: SeverityCounts }
+    >();
+    const costByPr = new Map<string, number>();
     if (prIds.length > 0) {
       const reviewRows = await container.db
-        .select({ prId: t.reviews.prId, score: t.reviews.score, costUsd: t.agentRuns.costUsd })
+        .select({ id: t.reviews.id, prId: t.reviews.prId, score: t.reviews.score })
         .from(t.reviews)
-        .leftJoin(t.agentRuns, eq(t.agentRuns.id, t.reviews.runId))
         .where(and(inArray(t.reviews.prId, prIds), eq(t.reviews.kind, 'review')))
         .orderBy(desc(t.reviews.createdAt));
       // Rows are newest-first → first seen per PR is the latest review.
       for (const rv of reviewRows) {
         if (!latestReviewByPr.has(rv.prId)) {
-          latestReviewByPr.set(rv.prId, { score: rv.score, costUsd: rv.costUsd });
+          latestReviewByPr.set(rv.prId, { id: rv.id, score: rv.score });
+        }
+      }
+      const costRows = await container.db
+        .select({ prId: t.agentRuns.prId, costUsd: t.agentRuns.costUsd })
+        .from(t.agentRuns)
+        .where(
+          and(
+            inArray(t.agentRuns.prId, prIds),
+            eq(t.agentRuns.status, 'done'),
+            isNotNull(t.agentRuns.costUsd),
+          ),
+        );
+      for (const c of costRows) {
+        if (c.prId && c.costUsd !== null) costByPr.set(c.prId, (costByPr.get(c.prId) ?? 0) + c.costUsd);
+      }
+      const latest = [...latestReviewByPr.values()];
+      if (latest.length > 0) {
+        const findingRows = await container.db
+          .select({ reviewId: t.findings.reviewId, severity: t.findings.severity })
+          .from(t.findings)
+          .where(and(inArray(t.findings.reviewId, latest.map((l) => l.id)), isNull(t.findings.dismissedAt)));
+        for (const l of latest) {
+          l.counts = rollupSeverities(findingRows.filter((f) => f.reviewId === l.id));
         }
       }
     }
@@ -157,7 +184,8 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         opened_at: r.openedAt?.toISOString() ?? null,
         updated_at: r.updatedAt?.toISOString() ?? null,
         score: review ? review.score : null,
-        cost_usd: review ? review.costUsd : null,
+        cost_usd: costByPr.get(r.id) ?? null,
+        severity_counts: review?.counts ?? null,
       };
     });
   });

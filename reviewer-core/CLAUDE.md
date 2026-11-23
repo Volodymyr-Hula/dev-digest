@@ -27,14 +27,15 @@ npm (`package-lock.json`) · `openai` 4 as the OpenRouter client · zod resolved
 
 - Types come from `../server/src/vendor/shared`, so this package type-checks only inside a full checkout.
 - Run `npm install` here even though `server/` consumes the source: the zod alias points at `reviewer-core/node_modules/zod`.
-- Any change here triggers the `server-unit` CI workflow.
-- `score` is recomputed from grounded findings; `verdict` is passed through from the model unchanged.
+- `verdict` is the model's and is never adjusted after grounding, while `score` is recomputed; see [specs/review-contract.md](specs/review-contract.md) C9–C10.
 
 ## Pointers
 
-- Read when you need the pipeline diagram or the public API overview: [README.md](README.md)
+- Read when you need the one-glance pipeline diagram: [README.md](README.md)
 - Read when changing prompt assembly, the severity/verdict rules or the `Review` contract: [../docs/agent-prompts/README.md](../docs/agent-prompts/README.md)
 - Read when writing or running tests: [../TESTING.md](../TESTING.md)
-- Read when you need design notes or how-tos for this module: [docs/](docs/)
-- Read when implementing or changing a feature here: [specs/](specs/)
+- Read when you need to understand how a review flows (single-pass vs map-reduce, prompt assembly, repair, grounding, scoring, server consumption): [docs/pipeline.md](docs/pipeline.md)
+- Read when changing the grounding gate or anything that decides whether a finding is kept or dropped: [specs/grounding.md](specs/grounding.md)
+- Read when changing `src/index.ts`, `ReviewInput`/`ReviewOutcome`, mode thresholds, reduce, score/verdict handling or the CI gate: [specs/review-contract.md](specs/review-contract.md)
+- Read when changing `prompt.ts`, `INJECTION_GUARD`, `wrapUntrusted`, `structured.ts` or the provider's repair loop: [specs/prompt-and-structured-output.md](specs/prompt-and-structured-output.md)
 - Read before starting work here and update at the end of the task, via the `engineering-insights` skill: [INSIGHTS.md](INSIGHTS.md)
