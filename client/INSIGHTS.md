@@ -7,6 +7,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## What Doesn't Work
 <!-- dead ends and antipatterns, each with why it failed; the most valuable section -->
+- **Don't pair `borderColor`/`borderWidth` with `borderLeft*` in an inline style that changes on rerender — use the four per-side longhands** — `borderColor`/`borderWidth` are shorthands too; React logs `Updating a style property during rerender (borderColor) when a conflicting property is set (borderLeftColor)` once the value toggles (e.g. on focus). Evidence: `src/app/repos/[repoId]/pulls/[number]/_components/FindingCard/styles.ts:5-16`. (2026-11-20)
 
 ## Codebase Patterns
 <!-- unwritten conventions and architectural decisions, with the reason -->
@@ -20,6 +21,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-20 — FindingCard border style rerender warning → per-side longhand rule.
 - 2026-11-20 — split severity counter row from filter buttons, Dismiss→Reject label → `file:line` evidence on the duplicate agent-name entry.
 - 2026-11-20 — severity counters + filter on PR page, timeline, PR list → duplicate agent-name test query.
 
