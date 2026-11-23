@@ -35,9 +35,11 @@ Fastify 5 + `fastify-type-provider-zod` · Drizzle ORM 0.45 / drizzle-kit 0.31 /
 - Duplicate zod module instances make `instanceof ZodError` unreliable; match by shape, as `app.ts` does.
 - `reapStaleRuns` on boot marks every `running` run as orphaned — valid only with a single API instance per DB.
 - The global rate limit is off under `NODE_ENV=test`; per-route limits still apply.
-- `pulls`, `polling`, `settings`, `workspace` are routes-only modules (DB and adapter calls inline in `routes.ts`).
+- `pulls`, `polling`, `settings`, `workspace` are legacy routes-only modules (DB and adapter calls inline in `routes.ts`). Don't copy them. A new module or handler follows the `onion-architecture` skill, and an edited legacy handler moves its calls into a service first.
 
 ## Pointers
+
+- Read before adding or changing a route, service, repository, adapter, port or Container getter: `onion-architecture` skill ([../.claude/skills/onion-architecture/SKILL.md](../.claude/skills/onion-architecture/SKILL.md))
 
 - Read when you need the API map, env vars or the request flow diagram: [README.md](README.md)
 - Read when touching indexing or the `repoIntel` facade: [src/modules/repo-intel/README.md](src/modules/repo-intel/README.md)

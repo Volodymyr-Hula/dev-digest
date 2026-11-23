@@ -3,6 +3,8 @@
 Local-first AI pull-request review starter: import a PR, run an agent review, get grounded findings.
 
 - Before the first plan or edit of any task, run the `engineering-insights` skill: read root [INSIGHTS.md](INSIGHTS.md), then the `INSIGHTS.md` of every module the task touches.
+- Before reporting a task that changed code as done, run the `engineering-insights` wrap-up.
+- Before `git push` or opening a PR, run the `pr-self-review` skill (reviews all local changes vs `origin/main` — commits, staged, unstaged, untracked — against the client/server skills); a `critical` finding blocks push/PR via the guard hook in `.claude/settings.json`.
 - Read when you need product purpose, architecture, roadmap or quick start: [README.md](README.md)
 
 ## Map
