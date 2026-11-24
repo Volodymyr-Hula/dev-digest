@@ -16,6 +16,7 @@ import { s } from "./styles";
 export function SkillsTab({ agent }: { agent: Agent }) {
   const t = useTranslations("agents");
   const tSkills = useTranslations("skills");
+  const tCommon = useTranslations("common");
   const skills = useSkills();
   const links = useAgentSkills(agent.id);
   const setLinks = useSetAgentSkills();
@@ -50,7 +51,9 @@ export function SkillsTab({ agent }: { agent: Agent }) {
       {(skills.isLoading || links.isLoading) && <Skeleton height={120} />}
       {(skills.isError || links.isError) && (
         <ErrorState
+          title={tCommon("states.error")}
           body={t("skills.loadError")}
+          retryLabel={tCommon("actions.retry")}
           onRetry={() => {
             skills.refetch();
             links.refetch();

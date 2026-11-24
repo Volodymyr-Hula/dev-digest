@@ -7,16 +7,18 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Badge, Button, FormField, Icon, Markdown, Modal, TextInput } from "@devdigest/ui";
+import { Button, FormField, Modal, TextInput } from "@devdigest/ui";
 import type { SkillImportPreview, SkillImportRequest } from "@devdigest/shared";
 import { ApiError } from "@/lib/api";
 import { useCreateSkill, useImportSkillPreview } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
 import { httpsUrl, required } from "@/lib/validation";
 import { useFormValidation } from "@/lib/useFormValidation";
-import { EMPTY_DRAFT, SKILL_DRAFT_RULES, SkillDraftFields, type SkillDraft } from "@/components/skill-draft-fields";
+import { EMPTY_DRAFT, SKILL_DRAFT_RULES, type SkillDraft } from "@/components/skill-draft-fields";
 import { ACCEPT, MAX_IMPORT_BYTES, MODAL_WIDTH } from "./constants";
 import { bytesToBase64, isImportableName, readFileBytes } from "./helpers";
+import { ImportFilePicker } from "./_components/ImportFilePicker";
+import { ImportPreview } from "./_components/ImportPreview";
 import { s } from "./styles";
 
 export type ImportMode = "file" | "url";
@@ -34,7 +36,6 @@ export function ImportSkillModal({ mode, onClose }: { mode: ImportMode; onClose:
   const [fileError, setFileError] = React.useState<string | null>(null);
   const [preview, setPreview] = React.useState<SkillImportPreview | null>(null);
   const [draft, setDraft] = React.useState<SkillDraft>(EMPTY_DRAFT);
-  const fileInput = React.useRef<HTMLInputElement>(null);
 
   const sv = useFormValidation({ url }, { url: [required, httpsUrl] }, "import-url");
   const dv = useFormValidation(draft, SKILL_DRAFT_RULES, "import-skill");
@@ -48,20 +49,16 @@ export function ImportSkillModal({ mode, onClose }: { mode: ImportMode; onClose:
   };
 
   const fetchPreview = async () => {
-    let req: SkillImportRequest;
-    if (mode === "url") {
-      if (!sv.validateAll()) return;
-      req = { kind: "url", url: url.trim() };
-    } else {
+    if (mode === "url" && !sv.validateAll()) return;
+    if (mode === "file") {
       if (!file) return setFileError(tv("required"));
       if (fileError) return;
-      req = {
-        kind: "file",
-        filename: file.name,
-        content_base64: bytesToBase64(await readFileBytes(file)),
-      };
     }
     try {
+      const req: SkillImportRequest =
+        mode === "url"
+          ? { kind: "url", url: url.trim() }
+          : { kind: "file", filename: file!.name, content_base64: bytesToBase64(await readFileBytes(file!)) };
       const p = await previewMut.mutateAsync(req);
       const { source: _source, ...fields } = p.draft;
       setDraft(fields);
@@ -69,7 +66,7 @@ export function ImportSkillModal({ mode, onClose }: { mode: ImportMode; onClose:
       dv.reset();
       if (p.name_taken) dv.setServerError("name", tv("nameTaken"), fields.name);
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : t("import.fileType");
+      const msg = e instanceof ApiError ? e.message : t("import.previewFailed");
       if (mode === "url") sv.setServerError("url", msg);
       else setFileError(msg);
     }
@@ -85,6 +82,7 @@ export function ImportSkillModal({ mode, onClose }: { mode: ImportMode; onClose:
       router.push(`/skills/${skill.id}?tab=preview`);
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) dv.setServerError("name", tv("nameTaken"));
+      else toast.error(e instanceof ApiError ? e.message : t("import.saveFailed"));
     }
   };
 
@@ -137,70 +135,10 @@ export function ImportSkillModal({ mode, onClose }: { mode: ImportMode; onClose:
           </FormField>
         )}
         {!preview && mode === "file" && (
-          <FormField
-            label={t("import.fileLabel")}
-            required
-            hint={t("import.fileHint")}
-            htmlFor="import-file"
-            error={fileError ?? undefined}
-          >
-            <div style={s.fileRow}>
-              <input
-                ref={fileInput}
-                id="import-file"
-                type="file"
-                accept={ACCEPT}
-                style={s.hiddenInput}
-                aria-invalid={!!fileError || undefined}
-                onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
-              />
-              <Button kind="secondary" icon="Upload" onClick={() => fileInput.current?.click()}>
-                {t("import.chooseFile")}
-              </Button>
-              <span className="mono" style={s.fileName}>
-                {file?.name ?? t("import.noFile")}
-              </span>
-            </div>
-          </FormField>
+          <ImportFilePicker accept={ACCEPT} file={file} error={fileError} onPick={pickFile} />
         )}
         {preview && (
-          <>
-            <div style={s.note}>
-              <Badge color="var(--warn)">{t("preview.untrustedBadge")}</Badge>
-              <span>{t("import.untrustedNote")}</span>
-            </div>
-            {preview.warnings.length > 0 && (
-              <ul style={s.warnings} aria-label={t("import.warnings")}>
-                {preview.warnings.map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
-            )}
-            <SkillDraftFields
-              draft={draft}
-              onChange={(p) => setDraft((d) => ({ ...d, ...p }))}
-              v={dv}
-              editBody={false}
-            />
-            {preview.ignored_files.length > 0 && (
-              <details style={s.ignored}>
-                <summary>
-                  <Icon.FileText size={12} /> {t("import.ignoredFiles", { count: preview.ignored_files.length })}
-                </summary>
-                <ul style={s.ignoredList}>
-                  {preview.ignored_files.map((f) => (
-                    <li key={f} className="mono">
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-            <div style={s.sectionLabel}>{t("import.bodyPreview")}</div>
-            <div style={s.bodyPreview} data-testid="import-body-preview">
-              <Markdown>{draft.body}</Markdown>
-            </div>
-          </>
+          <ImportPreview preview={preview} draft={draft} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} v={dv} />
         )}
       </div>
     </Modal>

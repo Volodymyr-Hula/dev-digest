@@ -79,7 +79,8 @@
     "cancel": "Cancel",
     "create": "Create skill",
     "creating": "Creating…",
-    "tags": "Tags"
+    "tags": "Tags",
+    "saveFailed": "Could not create the skill. Try again."
   },
   "config": {
     "title": "Configuration",
@@ -145,6 +146,8 @@
     "warnings": "Warnings",
     "ignoredFiles": "{count, plural, one {# file ignored} other {# files ignored}} (not read or executed)",
     "bodyPreview": "Body preview",
-    "importedToast": "Imported \"{name}\" as untrusted"
+    "importedToast": "Imported \"{name}\" as untrusted",
+    "previewFailed": "Could not read this source. Check the file or URL and try again.",
+    "saveFailed": "Could not import the skill. Try again."
   }
 }

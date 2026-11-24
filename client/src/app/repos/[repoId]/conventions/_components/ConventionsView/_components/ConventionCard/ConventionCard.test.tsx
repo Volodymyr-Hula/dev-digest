@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { IntlWrapper } from "@/test/intl";
 import { makeConvention } from "@/test/conventions";
 import type { ConventionCandidate } from "@devdigest/shared";
@@ -34,22 +35,26 @@ describe("ConventionCard", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("accepts and rejects a pending convention", () => {
+  it("accepts and rejects a pending convention", async () => {
+    const user = userEvent.setup();
     const onPatch = renderCard();
-    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+    await user.click(screen.getByRole("button", { name: "Accept" }));
     expect(onPatch).toHaveBeenCalledWith({ status: "accepted" });
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+    await user.click(screen.getByRole("button", { name: "Reject" }));
     expect(onPatch).toHaveBeenCalledWith({ status: "rejected" });
   });
 
   it("edits the rule inline and sends only a changed, non-empty text", async () => {
+    const user = userEvent.setup();
     const onPatch = renderCard();
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
     const box = screen.getByLabelText("Rule");
-    fireEvent.change(box, { target: { value: "   " } });
+    await user.clear(box);
+    await user.type(box, "   ");
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
-    fireEvent.change(box, { target: { value: "  Use .js in relative imports " } });
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await user.clear(box);
+    await user.type(box, "  Use .js in relative imports ");
+    await user.click(screen.getByRole("button", { name: "Save" }));
     expect(onPatch).toHaveBeenCalledWith({ rule: "Use .js in relative imports" });
   });
 

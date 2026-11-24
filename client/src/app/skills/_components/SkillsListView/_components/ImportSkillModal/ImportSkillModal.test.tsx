@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi, beforeEach } from "vitest";
-import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { SkillImportPreview } from "@devdigest/shared";
 import { IntlWrapper, testMessages } from "@/test/intl";
 import { ToastProvider } from "@/lib/toast";
@@ -48,24 +49,26 @@ function renderModal(mode: "file" | "url") {
 }
 
 describe("ImportSkillModal", () => {
-  it("validates the URL on blur and sends nothing while it is invalid", () => {
+  it("validates the URL on blur and sends nothing while it is invalid", async () => {
+    const user = userEvent.setup();
     renderModal("url");
     const url = screen.getByLabelText(/^Skill URL/);
-    fireEvent.change(url, { target: { value: "http://x.tld/a.md" } });
-    fireEvent.blur(url);
+    await user.type(url, "http://x.tld/a.md");
+    await user.tab();
     expect(screen.getByText(testMessages.validation.httpsUrl)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    await user.click(screen.getByRole("button", { name: "Preview" }));
     expect(previewAsync).not.toHaveBeenCalled();
   });
 
   it("previews a file without saving, flags the taken name, then imports the edited draft", async () => {
+    const user = userEvent.setup({ applyAccept: false });
     previewAsync.mockResolvedValueOnce(PREVIEW);
     createAsync.mockResolvedValueOnce({ id: "sk9", name: "sec-audit-2" });
     renderModal("file");
     const input = screen.getByLabelText(/^Skill file/) as HTMLInputElement;
     const f = new File(["---\nname: a\n---\nx"], "SKILL.md", { type: "text/markdown" });
-    fireEvent.change(input, { target: { files: [f] } });
-    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    await user.upload(input, f);
+    await user.click(screen.getByRole("button", { name: "Preview" }));
 
     await waitFor(() => expect(screen.getByTestId("import-body-preview")).toBeInTheDocument());
     expect(previewAsync.mock.calls[0]![0]).toMatchObject({ kind: "file", filename: "SKILL.md" });
@@ -75,9 +78,11 @@ describe("ImportSkillModal", () => {
     expect(screen.getByText("sec-audit/scripts/run.sh")).toBeInTheDocument();
     expect(screen.getByText(testMessages.validation.nameTaken)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByDisplayValue("sec-audit"), { target: { value: "sec-audit-2" } });
+    const nameField = screen.getByDisplayValue("sec-audit");
+    await user.clear(nameField);
+    await user.type(nameField, "sec-audit-2");
     expect(screen.queryByText(testMessages.validation.nameTaken)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Import skill" }));
+    await user.click(screen.getByRole("button", { name: "Import skill" }));
     await waitFor(() => expect(createAsync).toHaveBeenCalledTimes(1));
     const sent = createAsync.mock.calls[0]![0];
     expect(sent).toMatchObject({ name: "sec-audit-2", source: "imported_file", tags: ["owasp"] });
@@ -85,12 +90,22 @@ describe("ImportSkillModal", () => {
     expect(push).toHaveBeenCalledWith("/skills/sk9?tab=preview");
   });
 
-  it("rejects an unsupported file type before calling the server", () => {
+  it("rejects an unsupported file type before calling the server", async () => {
+    const user = userEvent.setup({ applyAccept: false });
     renderModal("file");
     const input = screen.getByLabelText(/^Skill file/);
-    fireEvent.change(input, { target: { files: [new File(["x"], "run.sh")] } });
+    await user.upload(input, new File(["x"], "run.sh"));
     expect(screen.getByText(testMessages.skills.import.fileType)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    await user.click(screen.getByRole("button", { name: "Preview" }));
     expect(previewAsync).not.toHaveBeenCalled();
+  });
+
+  it("shows a generic preview failure when the request rejects with a non-API error", async () => {
+    const user = userEvent.setup();
+    previewAsync.mockRejectedValueOnce(new Error("network"));
+    renderModal("url");
+    await user.type(screen.getByLabelText(/^Skill URL/), "https://x.tld/a.md");
+    await user.click(screen.getByRole("button", { name: "Preview" }));
+    expect(await screen.findByText(testMessages.skills.import.previewFailed)).toBeInTheDocument();
   });
 });

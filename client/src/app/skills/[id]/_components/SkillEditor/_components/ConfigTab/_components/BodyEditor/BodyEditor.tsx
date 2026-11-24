@@ -6,7 +6,7 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@devdigest/ui";
-import { approxTokens } from "../../helpers";
+import { approxTokens } from "./helpers";
 import { s, textareaHeight } from "./styles";
 
 export function BodyEditor({

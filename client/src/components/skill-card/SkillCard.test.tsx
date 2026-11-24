@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
-import messages from "../../../../../messages/en/skills.json";
+import { render, screen, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { IntlWrapper } from "@/test/intl";
 import { makeSkill } from "@/test/skills";
 import { SkillCard } from "./SkillCard";
 
@@ -9,9 +9,7 @@ afterEach(cleanup);
 
 function renderCard(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
-      {ui}
-    </NextIntlClientProvider>,
+    <IntlWrapper>{ui}</IntlWrapper>,
   );
 }
 
@@ -33,10 +31,11 @@ describe("SkillCard", () => {
     expect(screen.getByText("1 agent")).toBeInTheDocument();
   });
 
-  it("calls onClick for the card", () => {
+  it("calls onClick for the card", async () => {
+    const user = userEvent.setup();
     const onClick = vi.fn();
     renderCard(<SkillCard skill={makeSkill()} onClick={onClick} />);
-    fireEvent.click(screen.getByTestId("skill-card"));
+    await user.click(screen.getByTestId("skill-card"));
     expect(onClick).toHaveBeenCalled();
   });
 });

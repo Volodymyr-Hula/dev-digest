@@ -1,5 +1,7 @@
 import { describe, it, expect, afterEach, vi, beforeEach } from "vitest";
-import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { ApiError } from "@/lib/api";
 import { IntlWrapper, testMessages } from "@/test/intl";
 
 const mutateAsync = vi.fn();
@@ -9,6 +11,8 @@ vi.mock("@/lib/hooks/skills", () => ({
 }));
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+const toastError = vi.fn();
+vi.mock("@/lib/toast", () => ({ useToast: () => ({ success: vi.fn(), error: toastError }) }));
 
 import { CreateSkillModal } from "./CreateSkillModal";
 
@@ -16,6 +20,7 @@ afterEach(cleanup);
 beforeEach(() => {
   mutateAsync.mockReset();
   push.mockReset();
+  toastError.mockReset();
 });
 
 const v = testMessages.validation;
@@ -30,37 +35,50 @@ function renderModal() {
 }
 
 describe("CreateSkillModal", () => {
-  it("validates the name on blur, not while typing, and clears the error once fixed", () => {
+  it("validates the name on blur, not while typing, and clears the error once fixed", async () => {
+    const user = userEvent.setup();
     const { name } = renderModal();
-    fireEvent.change(name, { target: { value: "Security audit" } });
+    await user.type(name, "Security audit");
     expect(screen.queryByText(v.skillNameFormat)).toBeNull();
-    fireEvent.blur(name);
+    await user.tab();
     expect(screen.getByText(v.skillNameFormat)).toBeInTheDocument();
     expect(name).toHaveAttribute("aria-invalid", "true");
-    fireEvent.change(name, { target: { value: "security-audit" } });
+    await user.clear(name);
+    await user.type(name, "security-audit");
     expect(screen.queryByText(v.skillNameFormat)).toBeNull();
   });
 
-  it("keeps Create enabled; clicking it shows every error and focuses the first", () => {
+  it("keeps Create enabled; clicking it shows every error and focuses the first", async () => {
+    const user = userEvent.setup();
     const { name, create } = renderModal();
     expect(create).toBeEnabled();
-    fireEvent.click(create);
+    await user.click(create);
     expect(screen.getAllByText(v.required)).toHaveLength(2);
     expect(document.activeElement).toBe(name);
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
   it("sends tags and maps a 409 to the name field", async () => {
-    const { ApiError } = await import("@/lib/api");
+    const user = userEvent.setup();
     mutateAsync.mockRejectedValueOnce(new ApiError("taken", 409));
     const { name, create } = renderModal();
-    fireEvent.change(name, { target: { value: "security-audit" } });
+    await user.type(name, "security-audit");
     const tags = screen.getByLabelText(/^Tags/);
-    fireEvent.change(tags, { target: { value: "secu" } });
-    fireEvent.keyDown(tags, { key: "Enter" });
-    fireEvent.change(screen.getByLabelText(/^Skill body/), { target: { value: "# Rule" } });
-    fireEvent.click(create);
+    await user.type(tags, "secu{Enter}");
+    await user.type(screen.getByLabelText(/^Skill body/), "# Rule");
+    await user.click(create);
     await waitFor(() => expect(screen.getByText(v.nameTaken)).toBeInTheDocument());
     expect(mutateAsync.mock.calls[0]![0]).toMatchObject({ name: "security-audit", tags: ["security"], body: "# Rule" });
+  });
+
+  it("shows a toast for a failure other than a name clash", async () => {
+    const user = userEvent.setup();
+    mutateAsync.mockRejectedValueOnce(new ApiError("Server exploded", 500));
+    const { name, create } = renderModal();
+    await user.type(name, "ok-name");
+    await user.type(screen.getByLabelText(/^Skill body/), "# x");
+    await user.click(create);
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Server exploded"));
+    expect(push).not.toHaveBeenCalled();
   });
 });

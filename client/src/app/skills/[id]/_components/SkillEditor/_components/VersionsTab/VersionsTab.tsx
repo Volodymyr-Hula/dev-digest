@@ -13,6 +13,7 @@ import { s } from "./styles";
 
 export function VersionsTab({ skill }: { skill: Skill }) {
   const t = useTranslations("skills");
+  const tCommon = useTranslations("common");
   const toast = useToast();
   const { data: versions, isLoading, isError, refetch } = useSkillVersions(skill.id);
   const activate = useActivateSkillVersion();
@@ -34,14 +35,21 @@ export function VersionsTab({ skill }: { skill: Skill }) {
       <h2 style={s.h2}>{t("versions.title")}</h2>
       <p style={s.subtitle}>{t("versions.subtitle")}</p>
       {isLoading && <Skeleton height={160} />}
-      {isError && <ErrorState body={t("versions.loadError")} onRetry={() => refetch()} />}
+      {isError && (
+        <ErrorState
+          title={tCommon("states.error")}
+          body={t("versions.loadError")}
+          onRetry={() => refetch()}
+          retryLabel={tCommon("actions.retry")}
+        />
+      )}
       {versions && current && (
         <div style={s.layout}>
-          <div style={s.list} role="list">
+          <ul style={s.list}>
             {versions.map((v) => (
+              <li key={v.version} style={s.listItem}>
               <button
-                key={v.version}
-                role="listitem"
+                type="button"
                 aria-current={v.version === current.version || undefined}
                 style={s.item(v.version === current.version)}
                 onClick={() => setSelected(v.version)}
@@ -53,8 +61,9 @@ export function VersionsTab({ skill }: { skill: Skill }) {
                 </div>
                 <div style={s.itemDate}>{new Date(v.created_at).toLocaleString()}</div>
               </button>
+              </li>
             ))}
-          </div>
+          </ul>
           <div style={s.detail} data-testid="skill-version-detail">
             <div style={s.meta}>
               <span className="mono" style={{ fontWeight: 600 }}>

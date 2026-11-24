@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { Markdown, safeUrlTransform } from "./Markdown";
 
 /** S4 (security hardening) — untrusted markdown must not fetch anything. */
@@ -46,13 +46,12 @@ describe("safeUrlTransform", () => {
   });
 
   it("renders headings, lists and fenced code as real elements", () => {
-    const { container } = render(
-      <Markdown>{"## Rules\n\n- one\n- two\n\n1. first\n\n```ts\nconst x = 1;\n```\n\nuse `y`"}</Markdown>,
-    );
+    render(<Markdown>{"## Rules\n\n- one\n- two\n\n1. first\n\n```ts\nconst x = 1;\n```\n\nuse `y`"}</Markdown>);
     expect(screen.getByRole("heading", { level: 2, name: "Rules" })).toBeTruthy();
-    expect(container.querySelectorAll("ul > li")).toHaveLength(2);
-    expect(container.querySelectorAll("ol > li")).toHaveLength(1);
-    expect(container.querySelector("pre > code")?.textContent).toContain("const x = 1;");
-    expect(container.querySelector("p > code")?.textContent).toBe("y");
+    const [bullets, numbered] = screen.getAllByRole("list");
+    expect(within(bullets!).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(numbered!).getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByText("const x = 1;", { exact: false }).tagName).toBe("CODE");
+    expect(screen.getByText("y").tagName).toBe("CODE");
   });
 });

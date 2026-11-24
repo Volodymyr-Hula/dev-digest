@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi, beforeEach } from "vitest";
-import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
+import { render, screen, cleanup, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { SkillVersion } from "@devdigest/shared";
 import { IntlWrapper } from "@/test/intl";
 import { ToastProvider } from "@/lib/toast";
@@ -47,12 +48,13 @@ describe("skill VersionsTab", () => {
     expect(screen.queryByRole("button", { name: "Make active" })).toBeNull();
   });
 
-  it("renders a selected version's body as markdown and activates it after confirm", () => {
+  it("renders a selected version's body as markdown and activates it after confirm", async () => {
+    const user = userEvent.setup();
     vi.spyOn(window, "confirm").mockReturnValue(true);
     renderTab();
-    fireEvent.click(screen.getByText("v3"));
+    await user.click(screen.getByText("v3"));
     expect(screen.getByRole("heading", { level: 2, name: "Three" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Make active" }));
+    await user.click(screen.getByRole("button", { name: "Make active" }));
     expect(mutate.mock.calls[0]![0]).toEqual({ id: "sk1", version: 3 });
   });
 });

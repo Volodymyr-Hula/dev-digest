@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { RunTrace } from "@devdigest/shared";
@@ -20,8 +20,10 @@ const TRACE: RunTrace = {
   ],
 };
 
+let trace: RunTrace = TRACE;
+
 vi.mock("../../../../../../../lib/hooks/trace", () => ({
-  useRunTrace: () => ({ data: TRACE, isLoading: false }),
+  useRunTrace: () => ({ data: trace, isLoading: false }),
 }));
 vi.mock("../../../../../../../lib/hooks/reviews", () => ({
   useRunEvents: () => ({ events: [], running: false }),
@@ -30,6 +32,9 @@ vi.mock("../../../../../../../lib/hooks/reviews", () => ({
 import RunTraceDrawer from "./RunTraceDrawer";
 
 afterEach(cleanup);
+beforeEach(() => {
+  trace = TRACE;
+});
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
@@ -54,10 +59,9 @@ describe("A5 Run Trace drawer (smoke)", () => {
     );
     expect(screen.getByTestId("trace-skills")).toHaveTextContent("none");
     cleanup();
-    TRACE.skills_used = [{ skill_id: "sk1", name: "payments-api-conventions", version: 2 }];
+    trace = { ...TRACE, skills_used: [{ skill_id: "sk1", name: "payments-api-conventions", version: 2 }] };
     renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
     expect(screen.getByRole("link", { name: "payments-api-conventions v2" })).toHaveAttribute("href", "/skills/sk1");
-    TRACE.skills_used = [];
   });
 
   it("switches to the live log tab", () => {

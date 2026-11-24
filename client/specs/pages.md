@@ -160,7 +160,7 @@ Every form validates through `useFormValidation(values, rules, idPrefix)` (`src/
 - "Add Skill" is a menu: Create from scratch / Import from file / Import from URL. Community import is not built.
 - `CreateSkillModal` (fields in the shared `components/skill-draft-fields`: name, description, type, tags with suggestions, body): `POST /skills {name, description, type, tags, body}`. Inline validation (`SKILL_DRAFT_RULES`: name required + kebab-case, description ≤ 500, body required); Create stays enabled and validates on click; a 409 shows "already exists" on the name field. On success → `/skills/<id>?tab=config`.
 - `ImportSkillModal` (`mode: file | url`): step 1 picks a `.md/.markdown/.zip/.skill` file (≤ 2 MB, read as base64) or an https URL → `POST /skills/import/preview`; nothing is saved. Step 2 shows the untrusted note, server warnings, the editable draft (`SkillDraftFields` without body), the ignored archive files and the body rendered as markdown; `name_taken` pre-marks the name field. "Import skill" → `POST /skills {…draft, source}` without `trusted` (server default: untrusted) → `/skills/<id>?tab=preview`. Parse errors (422) show inline on the URL/file field.
-- `SkillCard`: type badge, `#tag`s, trusted check (or "untrusted source" badge), enabled toggle (`PUT {enabled}`), `{n} agents`.
+- `SkillCard` (`components/skill-card/`, also used on `/skills/:id`): type badge, `#tag`s, trusted check (or "untrusted source" badge), enabled toggle (`PUT {enabled}`), `{n} agents`.
 - States: 3 skeletons; `ErrorState` with retry; `EmptyState` only when the workspace has no skills (a search with no hits shows an empty grid).
 
 ## `/repos/:repoId/conventions` — conventions

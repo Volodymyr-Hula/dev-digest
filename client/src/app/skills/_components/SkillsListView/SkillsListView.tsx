@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { Button, Dropdown, EmptyState, ErrorState, Skeleton, Icon } from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
 import { useSkills, useUpdateSkill } from "@/lib/hooks/skills";
-import { SkillCard } from "../SkillCard";
+import { SkillCard } from "@/components/skill-card";
 import { CreateSkillModal } from "./_components/CreateSkillModal";
 import { ImportSkillModal, type ImportMode } from "./_components/ImportSkillModal";
 import { filterSkills } from "./helpers";
@@ -16,6 +16,7 @@ import { s } from "./styles";
 
 export function SkillsListView() {
   const t = useTranslations("skills");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { data: skills, isLoading, isError, refetch } = useSkills();
   const update = useUpdateSkill();
@@ -68,7 +69,14 @@ export function SkillsListView() {
             <Skeleton height={120} />
           </div>
         )}
-        {isError && <ErrorState body={t("page.loadError")} onRetry={() => refetch()} />}
+        {isError && (
+          <ErrorState
+            title={tCommon("states.error")}
+            body={t("page.loadError")}
+            onRetry={() => refetch()}
+            retryLabel={tCommon("actions.retry")}
+          />
+        )}
         {!isLoading && !isError && (skills ?? []).length === 0 && (
           <EmptyState
             icon="Sparkles"

@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { IntlWrapper, testMessages } from "@/test/intl";
 
 const mutateAsync = vi.fn();
@@ -11,7 +12,8 @@ import { CreateAgentModal } from "./CreateAgentModal";
 afterEach(cleanup);
 
 describe("CreateAgentModal", () => {
-  it("shows a required-name error on blur and blocks creation", () => {
+  it("shows a required-name error on blur and blocks creation", async () => {
+    const user = userEvent.setup();
     render(
       <IntlWrapper>
         <CreateAgentModal onClose={vi.fn()} />
@@ -19,9 +21,10 @@ describe("CreateAgentModal", () => {
     );
     const name = screen.getByLabelText(/^Name/);
     expect(screen.queryByText(testMessages.validation.required)).toBeNull();
-    fireEvent.blur(name);
+    await user.click(name);
+    await user.tab();
     expect(screen.getByText(testMessages.validation.required)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: testMessages.agents.create.create }));
+    await user.click(screen.getByRole("button", { name: testMessages.agents.create.create }));
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 });

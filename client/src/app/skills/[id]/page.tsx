@@ -10,13 +10,13 @@ import { AppShell } from "@/components/app-shell";
 import { useSkills, useSkill, useUpdateSkill } from "@/lib/hooks/skills";
 import { ApiError } from "@/lib/api";
 import { SKILL_TYPE_COLOR, skillTypeBg } from "@/lib/skill-meta";
-import { SkillCard } from "../_components/SkillCard";
-import { SkillEditor } from "./_components/SkillEditor";
-import { VALID_TABS } from "./_components/SkillEditor/constants";
+import { SkillCard } from "@/components/skill-card";
+import { SkillEditor, VALID_TABS } from "./_components/SkillEditor";
 import { s } from "./styles";
 
 export default function SkillEditorPage() {
   const t = useTranslations("skills");
+  const tCommon = useTranslations("common");
   const { id } = useParams<{ id: string }>();
   const search = useSearchParams();
   const router = useRouter();
@@ -47,6 +47,7 @@ export default function SkillEditorPage() {
           title={t("detail.notFound.title")}
           body={error instanceof ApiError ? error.message : t("detail.loadError")}
           onRetry={() => refetch()}
+          retryLabel={tCommon("actions.retry")}
         />
       </AppShell>
     );

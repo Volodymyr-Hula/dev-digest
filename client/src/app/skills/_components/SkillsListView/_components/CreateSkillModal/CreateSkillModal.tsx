@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button, Modal } from "@devdigest/ui";
 import { useCreateSkill } from "@/lib/hooks/skills";
 import { ApiError } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { EMPTY_DRAFT, SKILL_DRAFT_RULES, SkillDraftFields, type SkillDraft } from "@/components/skill-draft-fields";
 import { MODAL_WIDTH } from "./constants";
@@ -16,6 +17,7 @@ export function CreateSkillModal({ onClose }: { onClose: () => void }) {
   const t = useTranslations("skills");
   const tv = useTranslations("validation");
   const router = useRouter();
+  const toast = useToast();
   const create = useCreateSkill();
   const [draft, setDraft] = React.useState<SkillDraft>(EMPTY_DRAFT);
   const v = useFormValidation(draft, SKILL_DRAFT_RULES, "create-skill");
@@ -28,6 +30,7 @@ export function CreateSkillModal({ onClose }: { onClose: () => void }) {
       router.push(`/skills/${skill.id}?tab=config`);
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) v.setServerError("name", tv("nameTaken"));
+      else toast.error(e instanceof ApiError ? e.message : t("create.saveFailed"));
     }
   };
 

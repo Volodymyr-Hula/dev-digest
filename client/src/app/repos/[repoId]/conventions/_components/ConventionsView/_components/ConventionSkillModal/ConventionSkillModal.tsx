@@ -94,6 +94,7 @@ export function ConventionSkillModal({
       await linkAndClose(skill);
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) v.setServerError("name", tv("nameTaken"));
+      else toast.error(e instanceof ApiError ? e.message : t("modal.saveFailed"));
     }
   };
 

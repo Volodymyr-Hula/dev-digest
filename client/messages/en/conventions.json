@@ -70,6 +70,7 @@
     "saving": "Saving…",
     "createdToast": "Skill {name} created",
     "attachFailed": "The skill was saved, but the conventions could not be marked as used.",
-    "retryAttach": "Retry"
+    "retryAttach": "Retry",
+    "saveFailed": "Could not save the skill. Try again."
   }
 }

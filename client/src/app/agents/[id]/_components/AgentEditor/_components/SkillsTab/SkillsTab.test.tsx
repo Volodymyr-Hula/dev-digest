@@ -1,9 +1,8 @@
 import { describe, it, expect, afterEach, vi, beforeEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
+import { render, screen, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { Agent } from "@devdigest/shared";
-import agentsMessages from "../../../../../../../../messages/en/agents.json";
-import skillsMessages from "../../../../../../../../messages/en/skills.json";
+import { IntlWrapper } from "@/test/intl";
 import { makeSkill } from "@/test/skills";
 
 const mutate = vi.fn();
@@ -28,9 +27,9 @@ const AGENT = { id: "ag1", name: "Security Reviewer" } as Agent;
 
 function renderTab() {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ agents: agentsMessages, skills: skillsMessages }}>
+    <IntlWrapper>
       <SkillsTab agent={AGENT} />
-    </NextIntlClientProvider>,
+    </IntlWrapper>,
   );
 }
 
@@ -44,17 +43,19 @@ describe("agent SkillsTab", () => {
     expect(screen.getByText("disabled globally")).toBeInTheDocument();
   });
 
-  it("links and unlinks via the full id set", () => {
+  it("links and unlinks via the full id set", async () => {
+    const user = userEvent.setup();
     renderTab();
-    fireEvent.click(screen.getByRole("checkbox", { name: "pr-quality-rubric" }));
+    await user.click(screen.getByRole("checkbox", { name: "pr-quality-rubric" }));
     expect(mutate).toHaveBeenLastCalledWith({ agentId: "ag1", skillIds: ["b", "c"] });
-    fireEvent.click(screen.getByRole("checkbox", { name: "secret-gate" }));
+    await user.click(screen.getByRole("checkbox", { name: "secret-gate" }));
     expect(mutate).toHaveBeenLastCalledWith({ agentId: "ag1", skillIds: [] });
   });
 
-  it("filters by name", () => {
+  it("filters by name", async () => {
+    const user = userEvent.setup();
     renderTab();
-    fireEvent.change(screen.getByPlaceholderText("Filter skills…"), { target: { value: "secret" } });
+    await user.type(screen.getByPlaceholderText("Filter skills…"), "secret");
     expect(screen.getAllByRole("checkbox")).toHaveLength(1);
   });
 });

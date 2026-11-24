@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { IntlWrapper } from "@/test/intl";
 import { TagInput } from "./TagInput";
 
@@ -16,32 +17,34 @@ function setup(value: string[] = []) {
 }
 
 describe("TagInput", () => {
-  it("shows no suggestions below 3 characters", () => {
+  it("shows no suggestions below 3 characters", async () => {
+    const user = userEvent.setup();
     const { input } = setup();
-    fireEvent.change(input, { target: { value: "se" } });
+    await user.type(input, "se");
     expect(screen.queryByRole("listbox")).toBeNull();
   });
 
-  it("lists matching existing tags from 3 characters and picks with the keyboard", () => {
+  it("lists matching existing tags from 3 characters and picks with the keyboard", async () => {
+    const user = userEvent.setup();
     const { input, onChange } = setup();
-    fireEvent.change(input, { target: { value: "sec" } });
+    await user.type(input, "sec");
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["#secrets", "#security"]);
-    fireEvent.keyDown(input, { key: "ArrowDown" });
-    fireEvent.keyDown(input, { key: "Enter" });
+    await user.keyboard("{ArrowDown}{Enter}");
     expect(onChange).toHaveBeenCalledWith(["security"]);
   });
 
-  it("picks a suggestion with the mouse", () => {
+  it("picks a suggestion with the mouse", async () => {
+    const user = userEvent.setup();
     const { input, onChange } = setup(["style"]);
-    fireEvent.change(input, { target: { value: "secr" } });
-    fireEvent.mouseDown(screen.getByRole("option", { name: "#secrets" }));
+    await user.type(input, "secr");
+    await user.click(screen.getByRole("option", { name: "#secrets" }));
     expect(onChange).toHaveBeenCalledWith(["style", "secrets"]);
   });
 
-  it("adds a new free-text tag on Enter when nothing matches", () => {
+  it("adds a new free-text tag on Enter when nothing matches", async () => {
+    const user = userEvent.setup();
     const { input, onChange } = setup();
-    fireEvent.change(input, { target: { value: "Perf" } });
-    fireEvent.keyDown(input, { key: "Enter" });
+    await user.type(input, "Perf{Enter}");
     expect(onChange).toHaveBeenCalledWith(["perf"]);
   });
 });

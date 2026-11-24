@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ConventionScanState, ConventionsResponse } from "@devdigest/shared";
 import { IntlWrapper, testMessages } from "@/test/intl";
 import { makeConvention } from "@/test/conventions";
@@ -48,22 +49,25 @@ function renderView(data: ConventionsResponse) {
 }
 
 describe("ConventionsView", () => {
-  it("before the first scan: an empty state that starts the extraction", () => {
+  it("before the first scan: an empty state that starts the extraction", async () => {
+    const user = userEvent.setup();
     renderView({ scan: null, items: [], stats: STATS });
     expect(screen.getByText(m.empty.title)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: m.empty.cta }));
+    await user.click(screen.getByRole("button", { name: m.empty.cta }));
     expect(startScan).toHaveBeenCalled();
   });
 
-  it("a finished scan with nothing new says so and offers a re-scan", () => {
+  it("a finished scan with nothing new says so and offers a re-scan", async () => {
+    const user = userEvent.setup();
     renderView({ scan: scan("done"), items: [], stats: STATS });
     expect(screen.getByText(m.noneFound.title)).toBeInTheDocument();
     expect(screen.queryByText(m.empty.title)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: m.noneFound.cta }));
+    await user.click(screen.getByRole("button", { name: m.noneFound.cta }));
     expect(startScan).toHaveBeenCalled();
   });
 
-  it("a failed scan shows the message for its code, the raw detail and a retry", () => {
+  it("a failed scan shows the message for its code, the raw detail and a retry", async () => {
+    const user = userEvent.setup();
     renderView({
       scan: scan("failed", { error: "Model call failed: 401 invalid key", error_code: "llm_failed" }),
       items: [],
@@ -72,7 +76,7 @@ describe("ConventionsView", () => {
     expect(screen.getByText(m.failed.title)).toBeInTheDocument();
     expect(screen.getByText(m.failed.codes.llm_failed)).toBeInTheDocument();
     expect(screen.getByText("Details: Model call failed: 401 invalid key")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: m.failed.retry }));
+    await user.click(screen.getByRole("button", { name: m.failed.retry }));
     expect(startScan).toHaveBeenCalled();
   });
 
