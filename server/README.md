@@ -30,8 +30,8 @@ flowchart LR
   VAL --> MOD["feature module plugin<br/>modules/&lt;name&gt;/routes.ts"]
   MOD --> SVC["service<br/>(e.g. ReviewService)"]
   SVC --> DI{"DI container<br/>platform/container.ts"}
-  DI --> ADP["adapters (ports)<br/>llm · github · git · astgrep · tokenizer · secrets"]
-  ADP -->|"prod"| EXT["LLM (OpenAI/Anthropic) · GitHub · git · pgvector"]
+  DI --> ADP["adapters (ports)<br/>llm · github · git · astgrep · tokenizer · secrets · http fetch"]
+  ADP -->|"prod"| EXT["LLM (OpenAI/Anthropic) · GitHub · git · pgvector · skill URLs (https, public hosts only)"]
   ADP -->|"tests"| MOCK["src/adapters/mocks.ts<br/>MockLLMProvider · MockGitClient · …"]
   SVC --> DB[("Drizzle → Postgres")]
   SVC -. "run traces" .-> SSE["SSE stream → client"]
@@ -57,7 +57,8 @@ flowchart TB
     reviews["reviews<br/>/pulls/:id/review · /reviews · /findings/:id/(accept|dismiss)<br/>/runs/:id/(events|trace)"]
   end
   subgraph Agents["Agents"]
-    agents["agents<br/>/agents · /agents/:id"]
+    agents["agents<br/>/agents · /agents/:id · /agents/:id/skills"]
+    skills["skills<br/>/skills · /skills/:id · /skills/tags · /skills/:id/versions(/:v/activate)<br/>/skills/import/preview"]
   end
   subgraph Intel["Repo intelligence"]
     repoIntel["repo-intel<br/>/repos/:id/index-state · /resync"]

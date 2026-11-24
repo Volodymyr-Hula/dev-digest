@@ -67,6 +67,13 @@ export const RunStats = z.object({
 });
 export type RunStats = z.infer<typeof RunStats>;
 
+export const SkillUsed = z.object({
+  skill_id: z.string(),
+  name: z.string(),
+  version: z.number().int(),
+});
+export type SkillUsed = z.infer<typeof SkillUsed>;
+
 /** The single-document trace stored in `run_traces.trace`. */
 export const RunTrace = z.object({
   config: z.object({
@@ -83,6 +90,8 @@ export const RunTrace = z.object({
   raw_output: z.string(),
   memory_pulled: z.array(MemoryPulled),
   specs_read: z.array(z.string()),
+  /** Skills injected into the prompt (enabled + linked), at the version used. */
+  skills_used: z.array(SkillUsed).default([]),
   log: z.array(RunLogLine),
 });
 export type RunTrace = z.infer<typeof RunTrace>;

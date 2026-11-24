@@ -51,7 +51,7 @@ Port interfaces live in `vendor/shared/adapters.ts` (`LLMProvider` `:82`, `Embed
 | `AuthProvider` | `auth/local.ts` (`LocalNoAuthProvider`, seeded user + `default` workspace) | `MockAuthProvider` `:312` |
 | `SecretsProvider` | `secrets/local.ts` (`~/.devdigest/secrets.json`, env fallback) | `MockSecretsProvider` `:325` |
 
-`DepGraph`, `Tokenizer` and `RepoIntel` are server-local ports (not in `@devdigest/shared`); `ContainerOverrides` exposes them too (`container.ts:49-53`). `getContext()` (`modules/_shared/context.ts:14`) resolves `{ workspaceId, userId }` through `AuthProvider`; every route calls it so workspace scoping is never skipped (see the scoping gaps in [../specs/review-flow.md](../specs/review-flow.md#workspace-scoping)).
+`DepGraph`, `Tokenizer`, `RemoteFetcher` (`adapters/http/index.ts`: SSRF-guarded https fetch for skill import; mock `MockRemoteFetcher`) and `RepoIntel` are server-local ports (not in `@devdigest/shared`); `ContainerOverrides` exposes them too (`container.ts:49-53`). `getContext()` (`modules/_shared/context.ts:14`) resolves `{ workspaceId, userId }` through `AuthProvider`; every route calls it so workspace scoping is never skipped (see the scoping gaps in [../specs/review-flow.md](../specs/review-flow.md#workspace-scoping)).
 
 Contract ownership across packages: root [CLAUDE.md](../../CLAUDE.md) Gotchas.
 

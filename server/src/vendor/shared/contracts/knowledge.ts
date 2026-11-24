@@ -115,7 +115,7 @@ export type MemoryItem = z.infer<typeof MemoryItem>;
 export const SkillType = z.enum(['rubric', 'convention', 'security', 'custom']);
 export type SkillType = z.infer<typeof SkillType>;
 
-export const SkillSource = z.enum(['manual', 'imported_url', 'extracted', 'community']);
+export const SkillSource = z.enum(['manual', 'imported_url', 'imported_file', 'extracted', 'community']);
 export type SkillSource = z.infer<typeof SkillSource>;
 
 export const Skill = z.object({
@@ -128,8 +128,90 @@ export const Skill = z.object({
   enabled: z.boolean(),
   version: z.number().int(),
   evidence_files: z.array(z.string()).nullish(),
+  // Free-form labels, normalized (trimmed, lowercased, deduped). Own set per skill.
+  tags: z.array(z.string()).default([]),
+  // Trusted skills go into the prompt verbatim; untrusted ones (imported from a
+  // URL / community by default) are delimiter-wrapped as DATA. User-toggleable.
+  trusted: z.boolean().default(true),
+  // Number of agents this skill is linked to (agent_skills).
+  agent_count: z.number().int().default(0),
 });
 export type Skill = z.infer<typeof Skill>;
+
+/** Skill name: kebab-case slug, unique per workspace. */
+export const SkillName = z
+  .string()
+  .max(64)
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Use kebab-case: lowercase letters, digits and dashes');
+
+/** A tag as sent by a client; the server normalizes (trim + lowercase + dedupe). */
+export const SkillTag = z.string().trim().min(1).max(32);
+
+export const CreateSkillInput = z.object({
+  name: SkillName,
+  description: z.string().max(500).default(''),
+  type: SkillType,
+  body: z.string().min(1),
+  tags: z.array(SkillTag).max(20).default([]),
+  enabled: z.boolean().optional(),
+  // Omitted → the server's default for the source (imported → untrusted).
+  trusted: z.boolean().optional(),
+  source: z.enum(['manual', 'imported_url', 'imported_file']).default('manual'),
+});
+export type CreateSkillInput = z.input<typeof CreateSkillInput>;
+
+/** Where an import comes from. A file is sent base64-encoded (.md/.markdown or a .zip/.skill archive). */
+export const SkillImportRequest = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('url'), url: z.string().url().max(2000) }),
+  z.object({
+    kind: z.literal('file'),
+    filename: z.string().min(1).max(255),
+    content_base64: z.string().min(1),
+  }),
+]);
+export type SkillImportRequest = z.infer<typeof SkillImportRequest>;
+
+/** Parsed, not yet saved import. The client lets the user edit `draft`, then POSTs it to /skills. */
+export const SkillImportPreview = z.object({
+  draft: z.object({
+    name: z.string(),
+    description: z.string(),
+    type: SkillType,
+    tags: z.array(z.string()),
+    body: z.string(),
+    source: z.enum(['imported_url', 'imported_file']),
+  }),
+  warnings: z.array(z.string()),
+  // Archive entries that were not used (scripts, references, assets) — listed, never read or run.
+  ignored_files: z.array(z.string()),
+  name_taken: z.boolean(),
+});
+export type SkillImportPreview = z.infer<typeof SkillImportPreview>;
+
+export const UpdateSkillInput = z.object({
+  name: SkillName.optional(),
+  description: z.string().max(500).optional(),
+  type: SkillType.optional(),
+  body: z.string().min(1).optional(),
+  tags: z.array(SkillTag).max(20).optional(),
+  enabled: z.boolean().optional(),
+  trusted: z.boolean().optional(),
+});
+export type UpdateSkillInput = z.infer<typeof UpdateSkillInput>;
+
+/** Immutable snapshot of a skill's config at one version (everything but `enabled`). */
+export const SkillVersion = z.object({
+  skill_id: z.string(),
+  version: z.number().int(),
+  name: z.string(),
+  description: z.string(),
+  type: SkillType,
+  tags: z.array(z.string()),
+  trusted: z.boolean(),
+  body: z.string(),
+  created_at: z.string(),
+});
+export type SkillVersion = z.infer<typeof SkillVersion>;
 
 export const CommunitySkill = z.object({
   name: z.string(),
@@ -188,6 +270,8 @@ export const Agent = z.object({
   // Inject repo-intel context (repo skeleton + callers + rank note) into this
   // agent's review prompt. Default on; gated again by the global flag.
   repo_intel: z.boolean().default(true),
+  // Number of skills linked to this agent (agent_skills).
+  skill_count: z.number().int().default(0),
 });
 export type Agent = z.infer<typeof Agent>;
 

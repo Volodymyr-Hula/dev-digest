@@ -13,6 +13,8 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Tool & Library Notes
 <!-- dependency quirks, version-specific behaviour, CLI gotchas -->
+- **List a zip's entries with fflate `unzipSync(bytes, { filter: (f) => { …; return false } })`, then decompress only the chosen entry with a second `filter`** — a filter returning false skips decompression, so an archive's scripts/assets are never inflated and `f.originalSize` can be checked first; a throw inside the filter aborts the scan (used for the entry-count cap). Evidence: `src/modules/skills/import.ts` `extractSkillFromArchive`; `test/skills-import.test.ts`. (2026-11-24)
+- **Treat `db.execute(sql…)` as an array of rows (`Array.from(rows, …)`), not `{ rows }`** — with the `postgres-js` driver (`db/client.ts`) Drizzle returns postgres' `RowList`, so the node-postgres `.rows` shape is undefined. Evidence: `src/modules/skills/repository.ts` `distinctTags`; covered by `test/skills.it.test.ts` "lists distinct tags". (2026-11-24)
 
 ## Recurring Errors & Fixes
 <!-- exact error text → cause → fix -->
@@ -20,6 +22,8 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-24 — skill import (URL/file/zip), active version → fflate list-without-inflate pattern.
+- 2026-11-24 — skills module + prompt injection → postgres-js `execute` result shape.
 - 2026-11-20 — diagnosed `tool_choice` 400 on a review run → Anthropic-adapter forced-tool error entry.
 
 ## Open Questions

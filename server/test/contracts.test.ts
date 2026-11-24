@@ -166,6 +166,8 @@ describe('AI contracts parse fixtures', () => {
       log: [{ t: '00.00', kind: 'info', msg: 'started' }],
     });
     expect(trace.tool_calls).toHaveLength(1);
+    // Traces persisted before skills existed have no skills_used → defaults to [].
+    expect(trace.skills_used).toEqual([]);
   });
 });
 
