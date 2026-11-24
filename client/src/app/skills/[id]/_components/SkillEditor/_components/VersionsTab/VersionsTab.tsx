@@ -64,7 +64,7 @@ export function VersionsTab({ skill }: { skill: Skill }) {
               </li>
             ))}
           </ul>
-          <div style={s.detail} data-testid="skill-version-detail">
+          <section style={s.detail} aria-label={t("preview.version", { version: current.version })}>
             <div style={s.meta}>
               <span className="mono" style={s.versionName}>
                 {current.name}
@@ -95,7 +95,7 @@ export function VersionsTab({ skill }: { skill: Skill }) {
             <div style={s.body}>
               <Markdown>{current.body}</Markdown>
             </div>
-          </div>
+          </section>
         </div>
       )}
     </div>

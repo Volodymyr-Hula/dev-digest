@@ -23,6 +23,8 @@ export const s = {
     flexShrink: 0,
   }),
   name: {
+    color: "inherit",
+    textDecoration: "none",
     fontSize: 14,
     fontWeight: 600,
     flex: 1,

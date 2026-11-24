@@ -12,12 +12,12 @@ export function textareaHeight(lines: number): number {
 }
 
 export const s = {
-  frame: {
-    border: "1px solid var(--border)",
+  frame: (invalid: boolean): CSSProperties => ({
+    border: "1px solid " + (invalid ? "var(--crit)" : "var(--border)"),
     borderRadius: 8,
     overflow: "hidden",
     background: "var(--bg-surface)",
-  } satisfies CSSProperties,
+  }),
   bar: {
     display: "flex",
     alignItems: "center",

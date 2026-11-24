@@ -31,12 +31,12 @@ export function BodyEditor({
   const t = useTranslations("skills");
   const lines = Math.max(value.split("\n").length, 1);
   return (
-    <div style={invalid ? { ...s.frame, border: "1px solid var(--crit)" } : s.frame}>
+    <div style={s.frame(!!invalid)}>
       <div style={s.bar}>
         <Icon.FileText size={13} />
         <span className="mono">{fileName}</span>
         {dirty && <span style={s.unsaved}>{t("config.unsaved")}</span>}
-        <span style={s.tokens} className="tnum" data-testid="skill-token-count">
+        <span style={s.tokens} className="tnum">
           {t("config.tokens", { count: approxTokens(value) })}
         </span>
       </div>

@@ -5,7 +5,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, EmptyState, ErrorState, Icon, Skeleton } from "@devdigest/ui";
+import { Button } from "@devdigest/ui";
 import type { ConventionCandidate, UpdateConventionInput } from "@devdigest/shared";
 import { AppShell } from "@/components/app-shell";
 import { RepoNotFound } from "@/components/repo-not-found";
@@ -16,10 +16,9 @@ import {
   useUpdateConvention,
 } from "@/lib/hooks/conventions";
 import { useActiveRepo, useRepoNotFound } from "@/lib/repo-context";
-import { ConventionCard } from "./_components/ConventionCard";
+import { ConventionsBody } from "./_components/ConventionsBody";
 import { ConventionSkillModal } from "./_components/ConventionSkillModal";
-import { SECTIONS } from "./constants";
-import { emptyKind, groupConventions, scanError, type EmptyKind } from "./helpers";
+import { emptyKind, groupConventions, scanError } from "./helpers";
 import { s } from "./styles";
 
 export function ConventionsView({ repoId }: { repoId: string }) {
@@ -65,7 +64,7 @@ export function ConventionsView({ repoId }: { repoId: string }) {
           </h1>
           <p style={s.pageSubtitle}>{t("page.subtitle")}</p>
           {data && (
-            <p style={s.stats} data-testid="conventions-stats">
+            <p style={s.stats}>
               {t("page.stats", {
                 accepted: data.stats.accepted,
                 rejected: data.stats.rejected,
@@ -94,48 +93,18 @@ export function ConventionsView({ repoId }: { repoId: string }) {
       </div>
 
       <div style={s.content}>
-        {failure && !scanning && items.length > 0 && (
-          <div role="alert" style={s.error}>
-            <Icon.AlertTriangle size={14} style={s.errorIcon} />
-            <div>
-              <div>{t(`page.failed.codes.${failure.code}`)}</div>
-              {failure.detail && <div style={s.errorDetail}>{t("page.failed.details", { error: failure.detail })}</div>}
-            </div>
-          </div>
-        )}
-
-        {isLoading ? (
-          <div style={s.loadingStack}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} height={96} />
-            ))}
-          </div>
-        ) : isError ? (
-          <ErrorState title={t("page.loadError")} onRetry={() => refetch()} retryLabel={t("page.failed.retry")} />
-        ) : items.length === 0 ? (
-          <EmptyPage
-            kind={scanning ? "never" : emptyKind(data?.scan)}
-            failure={failure}
-            scanning={scanning}
-            onScan={runScan}
-          />
-        ) : (
-          SECTIONS.filter((k) => groups[k].length > 0).map((k) => (
-            <section key={k} style={s.section} aria-label={t(`page.sections.${k}`)}>
-              <div style={s.sectionLabel}>
-                {t(`page.sections.${k}`)} · {groups[k].length}
-              </div>
-              {groups[k].map((c) => (
-                <ConventionCard
-                  key={c.id}
-                  c={c}
-                  onPatch={(p) => patch(c, p)}
-                  pending={update.isPending && update.variables?.id === c.id}
-                />
-              ))}
-            </section>
-          ))
-        )}
+        <ConventionsBody
+          isLoading={isLoading}
+          isError={isError}
+          onReload={() => refetch()}
+          groups={groups}
+          empty={emptyKind(data?.scan)}
+          failure={failure}
+          scanning={scanning}
+          onScan={runScan}
+          onPatch={patch}
+          pendingId={update.isPending ? update.variables?.id : undefined}
+        />
       </div>
 
       {modalOpen && (
@@ -147,46 +116,5 @@ export function ConventionsView({ repoId }: { repoId: string }) {
         />
       )}
     </AppShell>
-  );
-}
-
-/** No conventions yet: never scanned (or scanning), scanned with nothing new, or the scan failed. */
-function EmptyPage({
-  kind,
-  failure,
-  scanning,
-  onScan,
-}: {
-  kind: EmptyKind;
-  failure: ReturnType<typeof scanError>;
-  scanning: boolean;
-  onScan: () => void;
-}) {
-  const t = useTranslations("conventions");
-  if (kind === "failed" && failure) {
-    return (
-      <ErrorState
-        title={t("page.failed.title")}
-        body={
-          <>
-            {t(`page.failed.codes.${failure.code}`)}
-            {failure.detail && <span style={s.errorDetail}>{t("page.failed.details", { error: failure.detail })}</span>}
-          </>
-        }
-        onRetry={onScan}
-        retryLabel={t("page.failed.retry")}
-      />
-    );
-  }
-  const key = kind === "noneFound" ? "noneFound" : "empty";
-  return (
-    <EmptyState
-      icon="ListChecks"
-      title={t(`page.${key}.title`)}
-      body={t(`page.${key}.body`)}
-      cta={scanning ? t("page.scanning") : t(`page.${key}.cta`)}
-      onCta={scanning ? undefined : onScan}
-      ctaLoading={scanning}
-    />
   );
 }

@@ -42,6 +42,7 @@ export function SkillsTab({ agent }: { agent: Agent }) {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder={t("skills.filterPlaceholder")}
+            aria-label={t("skills.filterPlaceholder")}
             style={s.filterInput}
           />
         </div>
@@ -70,7 +71,7 @@ export function SkillsTab({ agent }: { agent: Agent }) {
           {shown.map((sk) => {
             const on = linked.includes(sk.id);
             return (
-              <div key={sk.id} style={s.row(on, sk.enabled)} data-testid="agent-skill-row">
+              <div key={sk.id} style={s.row(on, sk.enabled)}>
                 <Checkbox
                   checked={on}
                   onChange={(v) => !setLinks.isPending && toggle(sk.id, v)}

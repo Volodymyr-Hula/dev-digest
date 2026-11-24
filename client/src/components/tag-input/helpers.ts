@@ -1,6 +1,4 @@
-/** Minimum typed characters before existing tags are suggested. */
-export const SUGGEST_MIN_CHARS = 3;
-export const MAX_SUGGESTIONS = 8;
+import { MAX_SUGGESTIONS, SUGGEST_MIN_CHARS } from "./constants";
 
 /** Same normalization the server applies: trim + lowercase. */
 export function normalizeTag(raw: string): string {

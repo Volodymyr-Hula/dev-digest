@@ -51,8 +51,10 @@ export function ImportPreview({
           </ul>
         </details>
       )}
-      <div style={s.sectionLabel}>{t("import.bodyPreview")}</div>
-      <div style={s.bodyPreview} data-testid="import-body-preview">
+      <div style={s.sectionLabel} id="import-body-preview-label">
+        {t("import.bodyPreview")}
+      </div>
+      <div style={s.bodyPreview} role="region" aria-labelledby="import-body-preview-label">
         <Markdown>{draft.body}</Markdown>
       </div>
     </>

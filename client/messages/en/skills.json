@@ -59,7 +59,8 @@
     "agentCount": "{count, plural, =0 {No agents} one {# agent} other {# agents}}",
     "trusted": "Trusted",
     "untrusted": "Untrusted — sent as data, not instructions",
-    "delete": "Delete skill"
+    "delete": "Delete skill",
+    "enabledToggle": "Enable {name}"
   },
   "tabs": {
     "config": "Config",

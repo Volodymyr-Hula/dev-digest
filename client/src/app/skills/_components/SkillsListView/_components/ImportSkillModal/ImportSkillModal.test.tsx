@@ -70,7 +70,7 @@ describe("ImportSkillModal", () => {
     await user.upload(input, f);
     await user.click(screen.getByRole("button", { name: "Preview" }));
 
-    await waitFor(() => expect(screen.getByTestId("import-body-preview")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("region", { name: "Body preview" })).toBeInTheDocument());
     expect(previewAsync.mock.calls[0]![0]).toMatchObject({ kind: "file", filename: "SKILL.md" });
     expect(createAsync).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { level: 2, name: "Check" })).toBeInTheDocument();

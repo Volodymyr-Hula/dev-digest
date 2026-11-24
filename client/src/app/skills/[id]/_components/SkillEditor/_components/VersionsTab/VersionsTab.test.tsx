@@ -44,7 +44,7 @@ describe("skill VersionsTab", () => {
     const [v3, v2] = screen.getAllByRole("listitem");
     expect(within(v3!).getByText("latest")).toBeInTheDocument();
     expect(within(v2!).getByText("active")).toBeInTheDocument();
-    expect(screen.getByTestId("skill-version-detail")).toHaveTextContent("two");
+    expect(screen.getByRole("region", { name: "v2" })).toHaveTextContent("two");
     expect(screen.queryByRole("button", { name: "Make active" })).toBeNull();
   });
 

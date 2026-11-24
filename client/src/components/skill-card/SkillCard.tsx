@@ -1,7 +1,11 @@
-/* SkillCard — name, type badge, tags, trusted mark, enabled toggle, agent count. */
+/* SkillCard — name, type badge, tags, trusted mark, enabled toggle, agent count.
+   The name is the link to `href` (keyboard / middle-click); a click anywhere
+   else on the card follows it too, except on the toggle. */
 "use client";
 
 import React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon, Badge, Toggle } from "@devdigest/ui";
 import type { Skill } from "@devdigest/shared";
@@ -10,26 +14,33 @@ import { s } from "./styles";
 
 export function SkillCard({
   skill,
+  href,
   active,
-  onClick,
   onToggle,
 }: {
   skill: Skill;
+  href: string;
   active?: boolean;
-  onClick?: () => void;
   onToggle?: (enabled: boolean) => void;
 }) {
   const t = useTranslations("skills");
+  const router = useRouter();
   const color = SKILL_TYPE_COLOR[skill.type];
+  // Mouse convenience only — the name link is the accessible way in. Clicks on
+  // the link itself or on the toggle are left to them.
+  const onCardClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("a, button")) return;
+    router.push(href);
+  };
   return (
-    <div onClick={onClick} style={s.card(!!active, skill.enabled)} data-testid="skill-card">
+    <div onClick={onCardClick} style={s.card(!!active, skill.enabled)}>
       <div style={s.headerRow}>
         <div style={s.iconBox(color)}>
           <Icon.Sparkles size={14} />
         </div>
-        <span className="mono" style={s.name}>
+        <Link href={href} className="mono" style={s.name} aria-current={active ? "page" : undefined}>
           {skill.name}
-        </span>
+        </Link>
         {skill.trusted ? (
           <span style={s.trusted} title={t("card.trusted")} aria-label={t("card.trusted")}>
             <Icon.CheckCircle size={14} />
@@ -40,9 +51,12 @@ export function SkillCard({
           </span>
         )}
         {onToggle && (
-          <div onClick={(e) => e.stopPropagation()}>
-            <Toggle on={skill.enabled} onChange={onToggle} size={14} />
-          </div>
+          <Toggle
+            on={skill.enabled}
+            onChange={onToggle}
+            size={14}
+            label={t("card.enabledToggle", { name: skill.name })}
+          />
         )}
       </div>
       <div style={s.description}>{skill.description || t("card.noDescription")}</div>

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { RunTrace } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/runs.json"; // apps/web/messages/en/runs.json
@@ -53,15 +53,16 @@ describe("A5 Run Trace drawer (smoke)", () => {
     expect(screen.getByText("Tool calls")).toBeInTheDocument();
   });
 
+  it("shows 'none' under Skills when the run used no skills", () => {
+    renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
+    expect(screen.getByRole("group", { name: "Skills" })).toHaveTextContent("none");
+  });
+
   it("lists the skills used with links to them", () => {
-    renderWithIntl(
-      <RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />,
-    );
-    expect(screen.getByTestId("trace-skills")).toHaveTextContent("none");
-    cleanup();
     trace = { ...TRACE, skills_used: [{ skill_id: "sk1", name: "payments-api-conventions", version: 2 }] };
     renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
-    expect(screen.getByRole("link", { name: "payments-api-conventions v2" })).toHaveAttribute("href", "/skills/sk1");
+    const skills = screen.getByRole("group", { name: "Skills" });
+    expect(within(skills).getByRole("link", { name: "payments-api-conventions v2" })).toHaveAttribute("href", "/skills/sk1");
   });
 
   it("switches to the live log tab", () => {

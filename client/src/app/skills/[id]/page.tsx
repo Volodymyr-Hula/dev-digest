@@ -69,7 +69,7 @@ export default function SkillEditorPage() {
                 key={sk.id}
                 skill={sk}
                 active={sk.id === id}
-                onClick={() => router.push(`/skills/${sk.id}?tab=${tab}`)}
+                href={`/skills/${sk.id}?tab=${tab}`}
                 onToggle={(enabled) => update.mutate({ id: sk.id, patch: { enabled } })}
               />
             ))}

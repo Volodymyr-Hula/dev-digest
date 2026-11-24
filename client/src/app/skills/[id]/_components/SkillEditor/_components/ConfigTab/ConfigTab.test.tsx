@@ -32,11 +32,11 @@ describe("skill ConfigTab", () => {
   it("shows the token estimate and marks an edited body unsaved", async () => {
     const user = userEvent.setup();
     renderTab();
-    expect(screen.getByTestId("skill-token-count")).toHaveTextContent("~2 tokens");
+    expect(screen.getByText("~2 tokens")).toBeInTheDocument();
     expect(screen.queryByText("unsaved")).toBeNull();
     await user.type(screen.getByLabelText("Skill body"), "i");
     expect(screen.getByText("unsaved")).toBeInTheDocument();
-    expect(screen.getByTestId("skill-token-count")).toHaveTextContent("~3 tokens");
+    expect(screen.getByText("~3 tokens")).toBeInTheDocument();
   });
 
   it("normalizes added tags and saves the full patch", async () => {

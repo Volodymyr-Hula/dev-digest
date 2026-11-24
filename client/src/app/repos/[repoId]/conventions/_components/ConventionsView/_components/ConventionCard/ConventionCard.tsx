@@ -7,7 +7,7 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, ConfidenceNum, MonoLink, Textarea } from "@devdigest/ui";
 import type { ConventionCandidate, UpdateConventionInput } from "@devdigest/shared";
-import { evidenceLabel } from "./helpers";
+import { evidenceLabel, statusBadge } from "./helpers";
 import { s } from "./styles";
 
 export function ConventionCard({
@@ -24,6 +24,7 @@ export function ConventionCard({
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(c.rule);
   const locked = !!c.skill_id;
+  const badge = statusBadge(c);
 
   const save = async () => {
     const rule = draft.trim();
@@ -43,13 +44,7 @@ export function ConventionCard({
           <div style={s.rule}>{c.rule}</div>
         )}
         <div style={s.meta}>
-          {locked ? (
-            <Badge>{t("card.inSkill")}</Badge>
-          ) : c.status === "accepted" ? (
-            <Badge color="var(--ok)">{t("card.accepted")}</Badge>
-          ) : c.status === "rejected" ? (
-            <Badge>{t("card.rejected")}</Badge>
-          ) : null}
+          {badge && <Badge color={badge.color}>{t(`card.${badge.key}`)}</Badge>}
           <ConfidenceNum value={c.confidence} />
         </div>
       </div>

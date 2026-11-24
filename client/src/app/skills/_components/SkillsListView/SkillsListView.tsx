@@ -3,7 +3,6 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Dropdown, EmptyState, ErrorState, Skeleton, Icon } from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
@@ -17,7 +16,6 @@ import { s } from "./styles";
 export function SkillsListView() {
   const t = useTranslations("skills");
   const tCommon = useTranslations("common");
-  const router = useRouter();
   const { data: skills, isLoading, isError, refetch } = useSkills();
   const update = useUpdateSkill();
   const [creating, setCreating] = React.useState(false);
@@ -42,6 +40,7 @@ export function SkillsListView() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("page.searchPlaceholder")}
+              aria-label={t("page.searchPlaceholder")}
               style={s.searchInput}
             />
           </div>
@@ -92,7 +91,7 @@ export function SkillsListView() {
               <SkillCard
                 key={sk.id}
                 skill={sk}
-                onClick={() => router.push(`/skills/${sk.id}?tab=config`)}
+                href={`/skills/${sk.id}?tab=config`}
                 onToggle={(enabled) => update.mutate({ id: sk.id, patch: { enabled } })}
               />
             ))}

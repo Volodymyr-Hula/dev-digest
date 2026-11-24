@@ -35,7 +35,7 @@ export function TraceBody({ trace, findings }: { trace: RunTrace; findings: Find
             </span>
           </Row>
           <Row label={t("trace.config.skills")}>
-            <div style={s.specsWrap} data-testid="trace-skills">
+            <div style={s.specsWrap} role="group" aria-label={t("trace.config.skills")}>
               {trace.skills_used.length === 0 ? (
                 <span style={s.specsNone}>{t("trace.config.none")}</span>
               ) : (

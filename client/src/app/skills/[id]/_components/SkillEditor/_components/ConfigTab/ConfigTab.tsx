@@ -1,5 +1,7 @@
 /* Skill ConfigTab — name, description, type, tags, trusted, enabled and the
-   markdown body. Saving any change but `enabled` creates a new version. */
+   markdown body. Saving any change but `enabled` creates a new version.
+   The form state is initialised from `skill` once; SkillEditor remounts this
+   tab (key = id:version) when another skill or version becomes active. */
 "use client";
 
 import React from "react";
@@ -36,18 +38,6 @@ export function ConfigTab({ skill }: { skill: Skill }) {
   const [body, setBody] = React.useState(skill.body);
 
   const v = useFormValidation({ name, body }, { name: [required, skillName], body: [required] }, "skill-config");
-
-  // Reset local form when switching skills or the active version changes.
-  React.useEffect(() => {
-    v.reset();
-    setName(skill.name);
-    setDescription(skill.description);
-    setType(skill.type);
-    setTags(skill.tags);
-    setTrusted(skill.trusted);
-    setEnabled(skill.enabled);
-    setBody(skill.body);
-  }, [skill.id, skill.version]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const bodyDirty = body !== skill.body;
 

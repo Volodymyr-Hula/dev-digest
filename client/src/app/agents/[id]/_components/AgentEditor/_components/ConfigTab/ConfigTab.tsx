@@ -33,19 +33,7 @@ export function ConfigTab({ agent }: { agent: Agent }) {
     "agent-config",
   );
 
-  // Reset local form when switching agents.
-  React.useEffect(() => {
-    v.reset();
-    setName(agent.name);
-    setDescription(agent.description);
-    setProvider(agent.provider);
-    setModel(agent.model);
-    setSystemPrompt(agent.system_prompt);
-    setStrategy(agent.strategy);
-    setCiFailOn(agent.ci_fail_on);
-    setRepoIntel(agent.repo_intel);
-    setEnabled(agent.enabled);
-  }, [agent.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // State is initialised from `agent` once; AgentEditor remounts this tab (key = agent.id) per agent.
 
   const { data: models } = useProviderModels(provider);
   // Show the price (USD per 1M in/out tokens) in the label when the provider
