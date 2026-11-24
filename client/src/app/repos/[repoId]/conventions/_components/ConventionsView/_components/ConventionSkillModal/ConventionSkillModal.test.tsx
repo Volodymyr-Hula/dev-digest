@@ -9,7 +9,6 @@ import { makeSkill } from "@/test/skills";
 const createSkill = vi.fn();
 const attach = vi.fn();
 const toastSuccess = vi.fn();
-const toastError = vi.fn();
 vi.mock("@/lib/hooks/skills", () => ({
   useCreateSkill: () => ({ mutateAsync: createSkill, isPending: false }),
   useSkillTags: () => ({ data: [] }),
@@ -17,7 +16,7 @@ vi.mock("@/lib/hooks/skills", () => ({
 vi.mock("@/lib/hooks/conventions", () => ({
   useAttachConventions: () => ({ mutateAsync: attach, isPending: false }),
 }));
-vi.mock("@/lib/toast", () => ({ useToast: () => ({ success: toastSuccess, error: toastError }) }));
+vi.mock("@/lib/toast", () => ({ useToast: () => ({ success: toastSuccess, error: vi.fn() }) }));
 
 import { ConventionSkillModal } from "./ConventionSkillModal";
 
@@ -26,7 +25,6 @@ beforeEach(() => {
   createSkill.mockReset();
   attach.mockReset();
   toastSuccess.mockReset();
-  toastError.mockReset();
 });
 
 const conventions = [
@@ -141,12 +139,12 @@ describe("ConventionSkillModal", () => {
     expect(attach).not.toHaveBeenCalled();
   });
 
-  it("shows a toast for a failure other than a name clash and does not attach", async () => {
+  it("on a failure other than a name clash stays open and does not attach (the global handler toasts it)", async () => {
     const user = userEvent.setup();
     createSkill.mockRejectedValueOnce(new ApiError("Server exploded", 500));
     const { onClose, save } = renderModal();
     await user.click(save());
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Server exploded"));
+    await waitFor(() => expect(createSkill).toHaveBeenCalled());
     expect(attach).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });

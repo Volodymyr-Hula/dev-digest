@@ -52,6 +52,14 @@ interface ScanPayload {
  * The scan is a JobRunner job; the UI polls `list` for its state.
  */
 export class ConventionsService {
+  /**
+   * Repos whose scan is being started right now. `startScan` reads the latest
+   * job and then enqueues; without this, two concurrent requests could both see
+   * no active job and start two (paid) scans. One API instance per DB is assumed
+   * (as for `reapStaleRuns`).
+   */
+  private readonly starting = new Set<string>();
+
   constructor(private readonly deps: ConventionsServiceDeps) {}
 
   private now(): Date {
@@ -80,18 +88,23 @@ export class ConventionsService {
 
   async startScan(workspaceId: string, repoId: string): Promise<{ jobId: string }> {
     await this.requireRepo(workspaceId, repoId);
-    const latest = await this.deps.repo.latestScanJob(workspaceId, repoId);
-    if (isActiveJob(latest, this.now())) {
-      throw new ConflictError('A conventions scan is already running for this repo');
+    const busy = () => new ConflictError('A conventions scan is already running for this repo');
+    if (this.starting.has(repoId)) throw busy();
+    this.starting.add(repoId);
+    try {
+      const latest = await this.deps.repo.latestScanJob(workspaceId, repoId);
+      if (isActiveJob(latest, this.now())) throw busy();
+      const payload: ScanPayload = { workspaceId, repoId };
+      const job = await this.deps.jobs.enqueue(workspaceId, SCAN_JOB_KIND, payload, {
+        retries: 0,
+        timeoutMs: SCAN_TIMEOUT_MS,
+      });
+      // The outcome is recorded on the jobs row (read back by `list`); nobody awaits `done`.
+      job.done.catch(() => {});
+      return { jobId: job.id };
+    } finally {
+      this.starting.delete(repoId);
     }
-    const payload: ScanPayload = { workspaceId, repoId };
-    const job = await this.deps.jobs.enqueue(workspaceId, SCAN_JOB_KIND, payload, {
-      retries: 0,
-      timeoutMs: SCAN_TIMEOUT_MS,
-    });
-    // The outcome is recorded on the jobs row (read back by `list`); nobody awaits `done`.
-    job.done.catch(() => {});
-    return { jobId: job.id };
   }
 
   /**

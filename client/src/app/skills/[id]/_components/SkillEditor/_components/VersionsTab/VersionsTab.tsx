@@ -66,7 +66,7 @@ export function VersionsTab({ skill }: { skill: Skill }) {
           </ul>
           <div style={s.detail} data-testid="skill-version-detail">
             <div style={s.meta}>
-              <span className="mono" style={{ fontWeight: 600 }}>
+              <span className="mono" style={s.versionName}>
                 {current.name}
               </span>
               <Badge color={SKILL_TYPE_COLOR[current.type]} bg={skillTypeBg(current.type)}>

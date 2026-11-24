@@ -16,10 +16,9 @@ import { useAttachConventions } from "@/lib/hooks/conventions";
 import { useToast } from "@/lib/toast";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { SKILL_DRAFT_RULES, SkillDraftFields, type SkillDraft } from "@/components/skill-draft-fields";
+import { MODAL_WIDTH } from "./constants";
 import { buildSkillBody, evidenceFiles, suggestSkillName } from "./helpers";
 import { s } from "./styles";
-
-const MODAL_WIDTH = 760;
 
 export function ConventionSkillModal({
   repoId,
@@ -93,8 +92,8 @@ export function ConventionSkillModal({
       setCreated(skill);
       await linkAndClose(skill);
     } catch (e) {
+      // Other failures are toasted by the global MutationCache handler (lib/providers.tsx).
       if (e instanceof ApiError && e.status === 409) v.setServerError("name", tv("nameTaken"));
-      else toast.error(e instanceof ApiError ? e.message : t("modal.saveFailed"));
     }
   };
 

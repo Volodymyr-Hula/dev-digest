@@ -12,6 +12,7 @@ import {
 } from '../src/modules/skills/import.js';
 import { checkedLookup, isBlockedAddress } from '../src/adapters/http/index.js';
 import { IMPORT_MAX_FILE_BYTES } from '../src/modules/skills/constants.js';
+import { SKILL_BODY_MAX } from '@devdigest/shared';
 
 const md = (fm: string, body = '# Rule\nCheck things.') => `---\n${fm}\n---\n${body}\n`;
 
@@ -48,6 +49,10 @@ describe('skill import — frontmatter', () => {
     expect(() => parseSkillMarkdown(md('name: a'))).toThrow(/"description"/);
     expect(() => parseSkillMarkdown(md('name: a\ndescription: d', '  '))).toThrow(/no body/);
     expect(() => parseSkillMarkdown(md('name: [a'))).toThrow(/not valid YAML/);
+  });
+
+  it('rejects a body longer than SKILL_BODY_MAX', () => {
+    expect(() => parseSkillMarkdown(md('name: big\ndescription: d', 'x'.repeat(SKILL_BODY_MAX + 1)))).toThrow(/longer than/);
   });
 
   it('handles CRLF and a BOM-free split', () => {

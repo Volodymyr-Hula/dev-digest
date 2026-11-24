@@ -40,6 +40,7 @@ export const s = {
   meta: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 8 } satisfies CSSProperties,
   description: { fontSize: 13, color: "var(--text-secondary)", marginBottom: 12 } satisfies CSSProperties,
   spacer: { flex: 1 } satisfies CSSProperties,
+  versionName: { fontWeight: 600 } satisfies CSSProperties,
   body: {
     fontSize: 14,
     borderTop: "1px solid var(--border)",

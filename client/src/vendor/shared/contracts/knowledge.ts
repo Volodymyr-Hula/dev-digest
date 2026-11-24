@@ -147,11 +147,17 @@ export const SkillName = z
 /** A tag as sent by a client; the server normalizes (trim + lowercase + dedupe). */
 export const SkillTag = z.string().trim().min(1).max(32);
 
+/**
+ * Max skill body length (chars). Every enabled linked skill is sent in full with
+ * each review, so the body is bounded (~25k tokens) like the other skill fields.
+ */
+export const SKILL_BODY_MAX = 100_000;
+
 export const CreateSkillInput = z.object({
   name: SkillName,
   description: z.string().max(500).default(''),
   type: SkillType,
-  body: z.string().min(1),
+  body: z.string().min(1).max(SKILL_BODY_MAX),
   tags: z.array(SkillTag).max(20).default([]),
   enabled: z.boolean().optional(),
   // Omitted → the server's default for the source (imported → untrusted).
@@ -194,7 +200,7 @@ export const UpdateSkillInput = z.object({
   name: SkillName.optional(),
   description: z.string().max(500).optional(),
   type: SkillType.optional(),
-  body: z.string().min(1).optional(),
+  body: z.string().min(1).max(SKILL_BODY_MAX).optional(),
   tags: z.array(SkillTag).max(20).optional(),
   enabled: z.boolean().optional(),
   trusted: z.boolean().optional(),

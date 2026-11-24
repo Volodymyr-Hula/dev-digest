@@ -9,7 +9,6 @@ import { Button, EmptyState, ErrorState, Icon, Skeleton } from "@devdigest/ui";
 import type { ConventionCandidate, UpdateConventionInput } from "@devdigest/shared";
 import { AppShell } from "@/components/app-shell";
 import { RepoNotFound } from "@/components/repo-not-found";
-import { ApiError } from "@/lib/api";
 import {
   isScanActive,
   useConventions,
@@ -17,17 +16,14 @@ import {
   useUpdateConvention,
 } from "@/lib/hooks/conventions";
 import { useActiveRepo, useRepoNotFound } from "@/lib/repo-context";
-import { useToast } from "@/lib/toast";
 import { ConventionCard } from "./_components/ConventionCard";
 import { ConventionSkillModal } from "./_components/ConventionSkillModal";
+import { SECTIONS } from "./constants";
 import { emptyKind, groupConventions, scanError, type EmptyKind } from "./helpers";
 import { s } from "./styles";
 
-const SECTIONS = ["pending", "accepted", "inSkills", "rejected"] as const;
-
 export function ConventionsView({ repoId }: { repoId: string }) {
   const t = useTranslations("conventions");
-  const toast = useToast();
   const { repos } = useActiveRepo();
   const repoNotFound = useRepoNotFound(repoId);
   const { data, isLoading, isError, refetch } = useConventions(repoId);
@@ -50,14 +46,14 @@ export function ConventionsView({ repoId }: { repoId: string }) {
   const groups = groupConventions(items);
   const failure = scanError(data?.scan);
 
-  const runScan = () =>
-    start.mutate(undefined, {
-      onError: (e) => toast.error(e instanceof ApiError ? e.message : t("page.scanStartFailed")),
-    });
+  // Mutation failures are toasted by the global MutationCache handler (lib/providers.tsx).
+  const runScan = () => start.mutate(undefined);
+  /** Resolves false on failure so an inline edit stays open with the user's text. */
   const patch = (c: ConventionCandidate, p: UpdateConventionInput) =>
-    update.mutateAsync({ id: c.id, patch: p }).catch((e) => {
-      toast.error(e instanceof ApiError ? e.message : t("card.updateFailed"));
-    });
+    update.mutateAsync({ id: c.id, patch: p }).then(
+      () => true,
+      () => false,
+    );
 
   return (
     <AppShell crumb={crumb}>

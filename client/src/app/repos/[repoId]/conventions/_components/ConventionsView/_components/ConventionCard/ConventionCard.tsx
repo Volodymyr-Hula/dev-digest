@@ -7,14 +7,8 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, ConfidenceNum, MonoLink, Textarea } from "@devdigest/ui";
 import type { ConventionCandidate, UpdateConventionInput } from "@devdigest/shared";
+import { evidenceLabel } from "./helpers";
 import { s } from "./styles";
-
-/** `path:12` / `path:12-18`, or just the path when the lines are unknown. */
-function evidenceLabel(c: ConventionCandidate): string {
-  const l = c.evidence_lines;
-  if (!l) return c.evidence_path;
-  return `${c.evidence_path}:${l.start === l.end ? l.start : `${l.start}-${l.end}`}`;
-}
 
 export function ConventionCard({
   c,
@@ -22,7 +16,8 @@ export function ConventionCard({
   pending,
 }: {
   c: ConventionCandidate;
-  onPatch: (patch: UpdateConventionInput) => Promise<unknown> | void;
+  /** Resolves false when the change failed (the edit then stays open). */
+  onPatch: (patch: UpdateConventionInput) => Promise<boolean | void> | void;
   pending?: boolean;
 }) {
   const t = useTranslations("conventions");
@@ -33,7 +28,7 @@ export function ConventionCard({
   const save = async () => {
     const rule = draft.trim();
     if (!rule) return;
-    if (rule !== c.rule) await onPatch({ rule });
+    if (rule !== c.rule && (await onPatch({ rule })) === false) return;
     setEditing(false);
   };
 

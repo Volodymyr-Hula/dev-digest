@@ -81,8 +81,8 @@ export function ImportSkillModal({ mode, onClose }: { mode: ImportMode; onClose:
       onClose();
       router.push(`/skills/${skill.id}?tab=preview`);
     } catch (e) {
+      // Other failures are toasted by the global MutationCache handler (lib/providers.tsx).
       if (e instanceof ApiError && e.status === 409) dv.setServerError("name", tv("nameTaken"));
-      else toast.error(e instanceof ApiError ? e.message : t("import.saveFailed"));
     }
   };
 

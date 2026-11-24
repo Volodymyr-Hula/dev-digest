@@ -9,7 +9,7 @@
  */
 import { Unzip, UnzipInflate, unzipSync } from 'fflate';
 import { parse as parseYaml } from 'yaml';
-import { SkillType, type SkillImportPreview } from '@devdigest/shared';
+import { SKILL_BODY_MAX, SkillType, type SkillImportPreview } from '@devdigest/shared';
 import { ValidationError } from '../../platform/errors.js';
 import { normalizeTags } from './helpers.js';
 import { IMPORT_MAX_ARCHIVE_ENTRIES, IMPORT_MAX_FILE_BYTES, SKILL_TAG_MAX, SKILL_TAGS_MAX } from './constants.js';
@@ -136,6 +136,9 @@ export function parseSkillMarkdown(text: string): ParsedSkill {
 
   const body = parts.body.trim();
   if (!body) throw invalid('The skill has no body after the frontmatter');
+  if (body.length > SKILL_BODY_MAX) {
+    throw invalid(`The skill body is longer than ${SKILL_BODY_MAX} characters`);
+  }
 
   return { draft: { name, description, type, tags, body }, warnings };
 }

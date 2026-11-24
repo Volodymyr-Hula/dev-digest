@@ -80,7 +80,7 @@ export function SkillsTab({ agent }: { agent: Agent }) {
                     </span>
                   }
                 />
-                <span style={{ flex: 1 }} />
+                <span style={s.spacer} />
                 {!sk.enabled && <Badge color="var(--text-muted)">{t("skills.disabled")}</Badge>}
                 <Badge color={SKILL_TYPE_COLOR[sk.type]} bg={skillTypeBg(sk.type)}>
                   {tSkills(`listItem.type.${sk.type}`)}

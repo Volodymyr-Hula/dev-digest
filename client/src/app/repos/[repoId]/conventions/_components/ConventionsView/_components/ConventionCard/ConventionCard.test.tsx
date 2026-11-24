@@ -58,6 +58,22 @@ describe("ConventionCard", () => {
     expect(onPatch).toHaveBeenCalledWith({ rule: "Use .js in relative imports" });
   });
 
+  it("keeps the edit open with the typed text when saving fails", async () => {
+    const user = userEvent.setup();
+    const onPatch = vi.fn().mockResolvedValue(false);
+    render(
+      <IntlWrapper>
+        <ConventionCard c={makeConvention()} onPatch={onPatch} />
+      </IntlWrapper>,
+    );
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.clear(screen.getByLabelText("Rule"));
+    await user.type(screen.getByLabelText("Rule"), "New text");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onPatch).toHaveBeenCalledWith({ rule: "New text" });
+    expect(screen.getByLabelText("Rule")).toHaveValue("New text");
+  });
+
   it("offers only Accept on a rejected convention", () => {
     renderCard({ status: "rejected" });
     expect(screen.getByRole("button", { name: "Accept" })).toBeInTheDocument();

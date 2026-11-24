@@ -7,7 +7,6 @@
     "subtitle": "Scan the cloned repo to surface house-rules — each backed by evidence you can turn into a Skill.",
     "scanning": "Scanning…",
     "rescan": "Re-scan",
-    "scanStartFailed": "Could not start the scan.",
     "loadError": "Could not load conventions.",
     "empty": {
       "title": "No conventions extracted yet",
@@ -52,8 +51,7 @@
     "edit": "Edit",
     "save": "Save",
     "cancel": "Cancel",
-    "ruleLabel": "Rule",
-    "updateFailed": "Could not update the convention."
+    "ruleLabel": "Rule"
   },
   "modal": {
     "title": "Create a skill from conventions",
@@ -70,7 +68,6 @@
     "saving": "Saving…",
     "createdToast": "Skill {name} created",
     "attachFailed": "The skill was saved, but the conventions could not be marked as used.",
-    "retryAttach": "Retry",
-    "saveFailed": "Could not save the skill. Try again."
+    "retryAttach": "Retry"
   }
 }

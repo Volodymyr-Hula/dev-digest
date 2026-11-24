@@ -11,8 +11,6 @@ vi.mock("@/lib/hooks/skills", () => ({
 }));
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-const toastError = vi.fn();
-vi.mock("@/lib/toast", () => ({ useToast: () => ({ success: vi.fn(), error: toastError }) }));
 
 import { CreateSkillModal } from "./CreateSkillModal";
 
@@ -20,7 +18,6 @@ afterEach(cleanup);
 beforeEach(() => {
   mutateAsync.mockReset();
   push.mockReset();
-  toastError.mockReset();
 });
 
 const v = testMessages.validation;
@@ -71,14 +68,15 @@ describe("CreateSkillModal", () => {
     expect(mutateAsync.mock.calls[0]![0]).toMatchObject({ name: "security-audit", tags: ["security"], body: "# Rule" });
   });
 
-  it("shows a toast for a failure other than a name clash", async () => {
+  it("on a failure other than a name clash stays open with no field error (the global handler toasts it)", async () => {
     const user = userEvent.setup();
     mutateAsync.mockRejectedValueOnce(new ApiError("Server exploded", 500));
     const { name, create } = renderModal();
     await user.type(name, "ok-name");
     await user.type(screen.getByLabelText(/^Skill body/), "# x");
     await user.click(create);
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Server exploded"));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     expect(push).not.toHaveBeenCalled();
+    expect(screen.queryByText(v.nameTaken)).toBeNull();
   });
 });

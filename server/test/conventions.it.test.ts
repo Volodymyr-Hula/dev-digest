@@ -173,6 +173,18 @@ d('conventions API', () => {
     await app.close();
   });
 
+  it('two concurrent scan requests start one scan: 202 + 409', async () => {
+    const llm = mockLlm();
+    const app = await makeApp(llm);
+    const repoId = await newRepo();
+    const post = () => app.inject({ method: 'POST', url: `/repos/${repoId}/conventions/scan` });
+    const codes = (await Promise.all([post(), post()])).map((r) => r.statusCode).sort();
+    expect(codes).toEqual([202, 409]);
+    await app.container.jobs.onIdle();
+    expect(llm.calls).toHaveLength(1);
+    await app.close();
+  });
+
   it('a failing model is called once (no retries) and the scan reports the error', async () => {
     const llm = new FailingLLM('openai');
     const app = await makeApp(llm);

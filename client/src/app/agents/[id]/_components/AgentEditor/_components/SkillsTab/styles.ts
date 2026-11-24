@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 
 /** Co-located styles for the agent SkillsTab. */
 export const s = {
+  spacer: { flex: 1 } satisfies CSSProperties,
   wrap: { maxWidth: 760 } satisfies CSSProperties,
   header: { display: "flex", alignItems: "center", gap: 10 } satisfies CSSProperties,
   h2: { fontSize: 18, fontWeight: 700 } satisfies CSSProperties,
