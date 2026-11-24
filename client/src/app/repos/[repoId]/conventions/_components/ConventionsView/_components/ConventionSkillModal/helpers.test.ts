@@ -8,6 +8,8 @@ const conv = (rule: string, path: string, snippet: string): ConventionCandidate 
   rule,
   evidence_path: path,
   evidence_snippet: snippet,
+  evidence_lines: null,
+  evidence_url: null,
   confidence: 0.9,
   status: "accepted",
   skill_id: null,

@@ -1,4 +1,4 @@
-import type { ConventionCandidate, ConventionScanState } from "@devdigest/shared";
+import type { ConventionCandidate, ConventionScanErrorCode, ConventionScanState } from "@devdigest/shared";
 
 export interface ConventionGroups {
   pending: ConventionCandidate[];
@@ -20,8 +20,20 @@ export function groupConventions(items: readonly ConventionCandidate[]): Convent
   return g;
 }
 
-/** The scan error to show, or null. `interrupted` gets its own message key. */
-export function scanError(scan: ConventionScanState | null | undefined): { interrupted: boolean; message: string } | null {
+/** A failed scan: the code picks the message, `detail` is the raw server text (none for `interrupted`). */
+export function scanError(
+  scan: ConventionScanState | null | undefined,
+): { code: ConventionScanErrorCode; detail: string | null } | null {
   if (scan?.status !== "failed") return null;
-  return { interrupted: scan.error === "interrupted", message: scan.error ?? "" };
+  const code = scan.error_code ?? "unknown";
+  return { code, detail: code === "interrupted" ? null : scan.error };
+}
+
+/** What the page shows when there are no conventions (and no scan is running). */
+export type EmptyKind = "never" | "noneFound" | "failed";
+
+export function emptyKind(scan: ConventionScanState | null | undefined): EmptyKind {
+  if (scan?.status === "failed") return "failed";
+  if (scan?.status === "done") return "noneFound";
+  return "never";
 }

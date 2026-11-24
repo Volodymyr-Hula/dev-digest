@@ -18,11 +18,20 @@ function renderCard(over: Partial<ConventionCandidate> = {}) {
 }
 
 describe("ConventionCard", () => {
-  it("shows the rule with its evidence path and snippet", () => {
+  it("shows the rule with its evidence path and snippet; the path links to the lines on GitHub", () => {
     renderCard();
     expect(screen.getByText("Relative imports carry the .js suffix")).toBeInTheDocument();
-    expect(screen.getByText("src/service.ts")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "src/service.ts:1" });
+    expect(link).toHaveAttribute("href", "https://github.com/acme/payments-api/blob/deadbeef/src/service.ts#L1");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getByText("import { repo } from './repository.js';")).toBeInTheDocument();
+  });
+
+  it("shows a line range, and plain text when there is no link", () => {
+    renderCard({ evidence_lines: { start: 3, end: 7 }, evidence_url: null });
+    expect(screen.getByText("src/service.ts:3-7")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("accepts and rejects a pending convention", () => {

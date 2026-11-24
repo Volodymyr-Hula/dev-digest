@@ -1,12 +1,20 @@
-/* ConventionCard — one extracted convention: rule, evidence (path + snippet),
-   confidence, and Accept / Reject / inline Edit. Read-only once it is in a skill. */
+/* ConventionCard — one extracted convention: rule, evidence (path + snippet;
+   the path links to the lines on GitHub at the scanned commit), confidence, and
+   Accept / Reject / inline Edit. Read-only once it is in a skill. */
 "use client";
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button, ConfidenceNum, Textarea } from "@devdigest/ui";
+import { Badge, Button, ConfidenceNum, MonoLink, Textarea } from "@devdigest/ui";
 import type { ConventionCandidate, UpdateConventionInput } from "@devdigest/shared";
 import { s } from "./styles";
+
+/** `path:12` / `path:12-18`, or just the path when the lines are unknown. */
+function evidenceLabel(c: ConventionCandidate): string {
+  const l = c.evidence_lines;
+  if (!l) return c.evidence_path;
+  return `${c.evidence_path}:${l.start === l.end ? l.start : `${l.start}-${l.end}`}`;
+}
 
 export function ConventionCard({
   c,
@@ -52,7 +60,11 @@ export function ConventionCard({
       </div>
 
       <div className="mono" style={s.path}>
-        {c.evidence_path}
+        {c.evidence_url ? (
+          <MonoLink href={c.evidence_url}>{evidenceLabel(c)}</MonoLink>
+        ) : (
+          evidenceLabel(c)
+        )}
       </div>
       <pre className="mono" style={s.snippet}>
         {c.evidence_snippet}

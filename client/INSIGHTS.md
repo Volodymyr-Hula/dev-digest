@@ -12,6 +12,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Codebase Patterns
 <!-- unwritten conventions and architectural decisions, with the reason -->
+- **Pass `retryLabel={t(…)}` whenever you give `ErrorState` an `onRetry`** — the design-system default is a hard-coded English "Retry" (`src/vendor/ui/primitives/ErrorState.tsx`), so a page that must take all its text from `messages/en/*.json` leaks an untranslated string otherwise. Pages written before the prop existed still use the default. (2026-11-24)
 
 ## Tool & Library Notes
 <!-- dependency quirks, version-specific behaviour, CLI gotchas -->
@@ -24,6 +25,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-24 — conventions page states, evidence links, multi-skill modal, trace skills row → `ErrorState` `retryLabel`.
 - 2026-11-24 — long imported skill clipped in BodyEditor → flex-stretch textarea rule.
 - 2026-11-24 — inline form validation, tag autocomplete, skill import modal, version activation → FileReader over `File#arrayBuffer` in tests.
 - 2026-11-24 — Skills Lab UI (/skills, editor tabs, agent Skills tab) → type-only import rule for `@devdigest/shared`.

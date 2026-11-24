@@ -7,6 +7,8 @@ export function makeConvention(over: Partial<ConventionCandidate> = {}): Convent
     rule: "Relative imports carry the .js suffix",
     evidence_path: "src/service.ts",
     evidence_snippet: "import { repo } from './repository.js';",
+    evidence_lines: { start: 1, end: 1 },
+    evidence_url: "https://github.com/acme/payments-api/blob/deadbeef/src/service.ts#L1",
     confidence: 0.9,
     status: "pending",
     skill_id: null,

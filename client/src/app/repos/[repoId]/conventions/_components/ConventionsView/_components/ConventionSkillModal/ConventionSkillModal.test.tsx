@@ -89,6 +89,38 @@ describe("ConventionSkillModal", () => {
     expect(attach).toHaveBeenCalledTimes(2);
   });
 
+  it("builds a skill from a subset: body, evidence files and attach follow the selection", async () => {
+    createSkill.mockResolvedValueOnce(makeSkill({ id: "sk1" }));
+    attach.mockResolvedValueOnce({ attached: 1 });
+    const { onClose, save } = renderModal();
+    expect(screen.getByText("2 of 2 selected", { exact: false })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("checkbox")[0]!);
+    expect(screen.getByText("1 of 2 selected", { exact: false })).toBeInTheDocument();
+    const body = (screen.getByLabelText(/^Skill body/) as HTMLTextAreaElement).value;
+    expect(body).not.toContain("Relative imports carry the .js suffix");
+    expect(body).toContain("- Handlers call one service method");
+
+    fireEvent.click(save());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(createSkill).toHaveBeenCalledWith(expect.objectContaining({ evidence_files: ["src/routes.ts"] }));
+    expect(attach).toHaveBeenCalledWith({ skill_id: "sk1", ids: ["c2"] });
+  });
+
+  it("keeps a hand-edited body when the selection changes until Rebuild; Save needs a selection", () => {
+    const { save } = renderModal();
+    const bodyBox = () => screen.getByLabelText(/^Skill body/) as HTMLTextAreaElement;
+    fireEvent.change(bodyBox(), { target: { value: "my own text" } });
+    fireEvent.click(screen.getAllByRole("checkbox")[0]!);
+    expect(bodyBox().value).toBe("my own text");
+    fireEvent.click(screen.getByRole("button", { name: "Rebuild body from selection" }));
+    expect(bodyBox().value).toContain("- Handlers call one service method");
+    expect(bodyBox().value).not.toContain("Relative imports");
+
+    fireEvent.click(screen.getAllByRole("checkbox")[1]!);
+    expect(screen.getByText(testMessages.conventions.modal.noneSelected)).toBeInTheDocument();
+    expect(save()).toBeDisabled();
+  });
+
   it("maps a 409 to the name field", async () => {
     const { ApiError } = await import("@/lib/api");
     createSkill.mockRejectedValueOnce(new ApiError("taken", 409));

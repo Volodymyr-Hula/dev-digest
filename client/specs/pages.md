@@ -124,7 +124,7 @@ Tab `findings` (`FindingsTab.tsx`):
 
 Tab `diff` (`DiffTab`): file-by-file `DiffViewer` from `pr.files`; comments are hidden until toggled, the toggle only appears when `comments.length > 0`; posting a comment reveals them again (`DiffTab.tsx:22,28-40`). Inline commenting is offered only when `pr.status === "open"` and `prId` is set (page:169; DiffTab:28). Failure → `notify.error` and the error is re-thrown to the composer (DiffTab:36-39).
 
-Trace drawer: rendered when `prId && ?trace` (page:174-182); `findings`/`agentName` come from the matching review by `run_id`; close removes `?trace`. It shows the persisted trace, not a live stream ([why](../docs/ui-architecture.md#live-run-updates-sse--polling)).
+Trace drawer: rendered when `prId && ?trace` (page:174-182); its Configuration section lists `skills_used` as `name vN` links to `/skills/:id` (the skill texts sit in the "Skills (dynamic)" prompt block); `findings`/`agentName` come from the matching review by `run_id`; close removes `?trace`. It shows the persisted trace, not a live stream ([why](../docs/ui-architecture.md#live-run-updates-sse--polling)).
 
 ## `/agents` — agent list
 
@@ -167,13 +167,13 @@ Every form validates through `useFormValidation(values, rules, idPrefix)` (`src/
 
 `app/repos/[repoId]/conventions/page.tsx` → `ConventionsView`. Hooks: `useConventions`, `useStartConventionsScan`, `useUpdateConvention`, `useAttachConventions` (`lib/hooks/conventions.ts`), `useCreateSkill`. Server behaviour: [../../server/specs/conventions.md](../../server/specs/conventions.md).
 
-- Header: `Conventions in <full_name>`, stats line `{accepted} accepted · {rejected} rejected · {inSkills} in skills`, Re-scan (only when there are items), "Accept as Skill ({n})" — disabled while no accepted convention is outside a skill.
+- Header: `Conventions in <full_name>`, stats line `{accepted} accepted · {rejected} rejected · {inSkills} in skills`, Re-scan (only when there are items), "Create skill ({n})" — disabled while no accepted convention is outside a skill.
 - Run extraction / Re-scan → `POST /repos/:id/conventions/scan` (202). The list refetches every 2 s while `scan.status` is `queued|running` (`CONVENTIONS_POLL_MS`), so leaving and returning keeps the scanning state. A 409 or other error → toast.
-- A failed last scan shows an alert: `interrupted` → "run it again", otherwise "Extraction failed: <error>".
+- A failed last scan (`scanError`): its message comes from `page.failed.codes.<error_code>` (`not_indexed | no_readable_files | llm_failed | timeout | interrupted | unknown`), with the raw server text as a "Details:" line (none for `interrupted`). With conventions on the page it is an alert above the list; without any it is an `ErrorState` whose Retry starts a new scan.
 - Sections in order To review / Accepted / In skills / Rejected (`groupConventions`); empty sections are hidden.
-- `ConventionCard`: rule, evidence path, snippet (`<pre>`), confidence. Pending: Accept / Reject / Edit; accepted: Reject / Edit; rejected: Accept. Edit is inline (Save disabled on empty text, unchanged text is not sent) → `PATCH /conventions/:id`. Cards in a skill are read-only with an "In skill" badge.
-- `ConventionSkillModal`: `SkillDraftFields` with `lockType` (type stays `convention`) and a 16-row body. Prefill: name `<repo>-conventions`, description, body = every accepted rule + evidence path + full snippet in a fence longer than any backtick run inside it. Save → `POST /skills {…, type: convention, source: extracted, evidence_files}` then `POST /repos/:id/conventions/attach`. A 409 marks the name field; a failed attach shows an alert and the button becomes Retry, which re-sends only the attach.
-- States: 3 skeletons; `ErrorState` with retry; `EmptyState` with "Run extraction" when there are no conventions; `RepoNotFound` for an unknown `:repoId`.
+- `ConventionCard`: rule, evidence `path:start-end` — a new-tab link to `evidence_url` (GitHub permalink at the scanned commit), plain text when it is null — snippet (`<pre>`), confidence. Pending: Accept / Reject / Edit; accepted: Reject / Edit; rejected: Accept. Edit is inline (Save disabled on empty text, unchanged text is not sent) → `PATCH /conventions/:id`. Cards in a skill are read-only with an "In skill" badge.
+- `ConventionSkillModal`: a checklist of the accepted conventions outside a skill (all checked at first) above `SkillDraftFields` with `lockType` (type stays `convention`) and a 16-row body. Prefill: name `<repo>-conventions`, description, body = every selected rule + evidence path + full snippet in a fence longer than any backtick run inside it. The body follows the selection until it is edited by hand; then "Rebuild body from selection" re-applies it. Save is disabled with nothing selected. Save → `POST /skills {…, type: convention, source: extracted, evidence_files}` (selected only) then `POST /repos/:id/conventions/attach` with the selected ids — the unselected ones stay in Accepted for another skill. A 409 marks the name field; a failed attach shows an alert and the button becomes Retry, which re-sends only the attach.
+- States (`emptyKind`): 3 skeletons; load `ErrorState` with retry; no conventions and `scan === null` → `EmptyState` "Run extraction"; last scan `done` with nothing → "No new conventions found" + Re-scan; last scan `failed` → the error state above; `RepoNotFound` for an unknown `:repoId`. All strings come from `messages/en/conventions.json`.
 
 ## `/skills/:id` — skill editor
 

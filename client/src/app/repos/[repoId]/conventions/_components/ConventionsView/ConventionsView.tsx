@@ -20,7 +20,7 @@ import { useActiveRepo, useRepoNotFound } from "@/lib/repo-context";
 import { useToast } from "@/lib/toast";
 import { ConventionCard } from "./_components/ConventionCard";
 import { ConventionSkillModal } from "./_components/ConventionSkillModal";
-import { groupConventions, scanError } from "./helpers";
+import { emptyKind, groupConventions, scanError, type EmptyKind } from "./helpers";
 import { s } from "./styles";
 
 const SECTIONS = ["pending", "accepted", "inSkills", "rejected"] as const;
@@ -52,7 +52,7 @@ export function ConventionsView({ repoId }: { repoId: string }) {
 
   const runScan = () =>
     start.mutate(undefined, {
-      onError: (e) => toast.error(e instanceof ApiError ? e.message : t("page.extractionFailed")),
+      onError: (e) => toast.error(e instanceof ApiError ? e.message : t("page.scanStartFailed")),
     });
   const patch = (c: ConventionCandidate, p: UpdateConventionInput) =>
     update.mutateAsync({ id: c.id, patch: p }).catch((e) => {
@@ -98,10 +98,13 @@ export function ConventionsView({ repoId }: { repoId: string }) {
       </div>
 
       <div style={s.content}>
-        {failure && !scanning && (
+        {failure && !scanning && items.length > 0 && (
           <div role="alert" style={s.error}>
-            <Icon.AlertTriangle size={14} />
-            {failure.interrupted ? t("page.interrupted") : `${t("page.extractionFailed")}: ${failure.message}`}
+            <Icon.AlertTriangle size={14} style={s.errorIcon} />
+            <div>
+              <div>{t(`page.failed.codes.${failure.code}`)}</div>
+              {failure.detail && <div style={s.errorDetail}>{t("page.failed.details", { error: failure.detail })}</div>}
+            </div>
           </div>
         )}
 
@@ -112,15 +115,13 @@ export function ConventionsView({ repoId }: { repoId: string }) {
             ))}
           </div>
         ) : isError ? (
-          <ErrorState title={t("page.loadError")} onRetry={() => refetch()} />
+          <ErrorState title={t("page.loadError")} onRetry={() => refetch()} retryLabel={t("page.failed.retry")} />
         ) : items.length === 0 ? (
-          <EmptyState
-            icon="ListChecks"
-            title={t("page.empty.title")}
-            body={t("page.empty.body")}
-            cta={scanning ? t("page.scanning") : t("page.empty.cta")}
-            onCta={scanning ? undefined : runScan}
-            ctaLoading={scanning}
+          <EmptyPage
+            kind={scanning ? "never" : emptyKind(data?.scan)}
+            failure={failure}
+            scanning={scanning}
+            onScan={runScan}
           />
         ) : (
           SECTIONS.filter((k) => groups[k].length > 0).map((k) => (
@@ -150,5 +151,46 @@ export function ConventionsView({ repoId }: { repoId: string }) {
         />
       )}
     </AppShell>
+  );
+}
+
+/** No conventions yet: never scanned (or scanning), scanned with nothing new, or the scan failed. */
+function EmptyPage({
+  kind,
+  failure,
+  scanning,
+  onScan,
+}: {
+  kind: EmptyKind;
+  failure: ReturnType<typeof scanError>;
+  scanning: boolean;
+  onScan: () => void;
+}) {
+  const t = useTranslations("conventions");
+  if (kind === "failed" && failure) {
+    return (
+      <ErrorState
+        title={t("page.failed.title")}
+        body={
+          <>
+            {t(`page.failed.codes.${failure.code}`)}
+            {failure.detail && <span style={s.errorDetail}>{t("page.failed.details", { error: failure.detail })}</span>}
+          </>
+        }
+        onRetry={onScan}
+        retryLabel={t("page.failed.retry")}
+      />
+    );
+  }
+  const key = kind === "noneFound" ? "noneFound" : "empty";
+  return (
+    <EmptyState
+      icon="ListChecks"
+      title={t(`page.${key}.title`)}
+      body={t(`page.${key}.body`)}
+      cta={scanning ? t("page.scanning") : t(`page.${key}.cta`)}
+      onCta={scanning ? undefined : onScan}
+      ctaLoading={scanning}
+    />
   );
 }

@@ -1,12 +1,14 @@
 import { describe, it, expect } from "vitest";
-import type { ConventionCandidate } from "@devdigest/shared";
-import { groupConventions, scanError } from "./helpers";
+import type { ConventionCandidate, ConventionScanState } from "@devdigest/shared";
+import { emptyKind, groupConventions, scanError } from "./helpers";
 
 const c = (id: string, status: ConventionCandidate["status"], skill_id: string | null = null): ConventionCandidate => ({
   id,
   rule: id,
   evidence_path: "a.ts",
   evidence_snippet: "x",
+  evidence_lines: null,
+  evidence_url: null,
   confidence: 0.5,
   status,
   skill_id,
@@ -23,17 +25,31 @@ describe("groupConventions", () => {
   });
 });
 
+const scan = (status: ConventionScanState["status"], error: string | null = null, error_code: ConventionScanState["error_code"] = null): ConventionScanState => ({
+  status,
+  error,
+  error_code,
+  started_at: null,
+  finished_at: null,
+});
+
 describe("scanError", () => {
-  it("reports only failed scans and flags interruption", () => {
+  it("reports only failed scans, by code, with the raw text as detail", () => {
     expect(scanError(null)).toBeNull();
-    expect(scanError({ status: "done", error: null, started_at: null, finished_at: null })).toBeNull();
-    expect(scanError({ status: "failed", error: "interrupted", started_at: null, finished_at: null })).toEqual({
-      interrupted: true,
-      message: "interrupted",
+    expect(scanError(scan("done"))).toBeNull();
+    expect(scanError(scan("failed", "interrupted", "interrupted"))).toEqual({ code: "interrupted", detail: null });
+    expect(scanError(scan("failed", "Model call failed: 401", "llm_failed"))).toEqual({
+      code: "llm_failed",
+      detail: "Model call failed: 401",
     });
-    expect(scanError({ status: "failed", error: "boom", started_at: null, finished_at: null })).toEqual({
-      interrupted: false,
-      message: "boom",
-    });
+    expect(scanError(scan("failed", "boom"))).toEqual({ code: "unknown", detail: "boom" });
+  });
+});
+
+describe("emptyKind", () => {
+  it("tells a never-run page from an empty result and a failure", () => {
+    expect(emptyKind(null)).toBe("never");
+    expect(emptyKind(scan("done"))).toBe("noneFound");
+    expect(emptyKind(scan("failed", "x", "unknown"))).toBe("failed");
   });
 });

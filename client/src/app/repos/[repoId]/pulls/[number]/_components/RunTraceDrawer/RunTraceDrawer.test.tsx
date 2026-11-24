@@ -48,6 +48,18 @@ describe("A5 Run Trace drawer (smoke)", () => {
     expect(screen.getByText("Tool calls")).toBeInTheDocument();
   });
 
+  it("lists the skills used with links to them", () => {
+    renderWithIntl(
+      <RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />,
+    );
+    expect(screen.getByTestId("trace-skills")).toHaveTextContent("none");
+    cleanup();
+    TRACE.skills_used = [{ skill_id: "sk1", name: "payments-api-conventions", version: 2 }];
+    renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
+    expect(screen.getByRole("link", { name: "payments-api-conventions v2" })).toHaveAttribute("href", "/skills/sk1");
+    TRACE.skills_used = [];
+  });
+
   it("switches to the live log tab", () => {
     renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
     fireEvent.click(screen.getByText("log"));
