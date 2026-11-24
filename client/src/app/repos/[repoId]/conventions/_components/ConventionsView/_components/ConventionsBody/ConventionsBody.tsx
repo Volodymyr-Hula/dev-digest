@@ -17,33 +17,43 @@ export interface ScanFailure {
   detail: string | null;
 }
 
-export function ConventionsBody({
-  isLoading,
-  isError,
-  onReload,
-  groups,
-  empty,
-  failure,
-  scanning,
-  onScan,
-  onPatch,
-  pendingId,
-}: {
+/** The conventions query as the body needs it. */
+export interface ConventionsLoad {
   isLoading: boolean;
   isError: boolean;
-  onReload: () => void;
-  groups: Record<SectionKey, ConventionCandidate[]>;
+  reload: () => void;
+}
+
+/** The scan as the body needs it. */
+export interface ConventionsScan {
   /** What to show when there are no conventions. */
   empty: "never" | "noneFound" | "failed";
   failure: ScanFailure | null;
   scanning: boolean;
-  onScan: () => void;
-  onPatch: (c: ConventionCandidate, p: UpdateConventionInput) => Promise<boolean>;
+  start: () => void;
+}
+
+/** Card actions: `patch` resolves false on failure; `pendingId` is the card being saved. */
+export interface ConventionsEdit {
+  patch: (c: ConventionCandidate, p: UpdateConventionInput) => Promise<boolean>;
   pendingId: string | undefined;
+}
+
+export function ConventionsBody({
+  load,
+  scan,
+  groups,
+  edit,
+}: {
+  load: ConventionsLoad;
+  scan: ConventionsScan;
+  groups: Record<SectionKey, ConventionCandidate[]>;
+  edit: ConventionsEdit;
 }) {
   const t = useTranslations("conventions");
+  const { empty, failure, scanning, start: onScan } = scan;
 
-  if (isLoading) {
+  if (load.isLoading) {
     return (
       <div style={s.loadingStack}>
         {Array.from({ length: 3 }).map((_, i) => (
@@ -52,8 +62,8 @@ export function ConventionsBody({
       </div>
     );
   }
-  if (isError) {
-    return <ErrorState title={t("page.loadError")} onRetry={onReload} retryLabel={t("page.failed.retry")} />;
+  if (load.isError) {
+    return <ErrorState title={t("page.loadError")} onRetry={load.reload} retryLabel={t("page.failed.retry")} />;
   }
 
   const sections = SECTIONS.filter((k) => groups[k].length > 0);
@@ -97,7 +107,7 @@ export function ConventionsBody({
             {t(`page.sections.${k}`)} · {groups[k].length}
           </div>
           {groups[k].map((c) => (
-            <ConventionCard key={c.id} c={c} onPatch={(p) => onPatch(c, p)} pending={pendingId === c.id} />
+            <ConventionCard key={c.id} c={c} onPatch={(p) => edit.patch(c, p)} pending={edit.pendingId === c.id} />
           ))}
         </section>
       ))}

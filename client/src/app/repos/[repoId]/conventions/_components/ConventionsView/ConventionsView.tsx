@@ -94,16 +94,10 @@ export function ConventionsView({ repoId }: { repoId: string }) {
 
       <div style={s.content}>
         <ConventionsBody
-          isLoading={isLoading}
-          isError={isError}
-          onReload={() => refetch()}
+          load={{ isLoading, isError, reload: () => refetch() }}
+          scan={{ empty: emptyKind(data?.scan), failure, scanning, start: runScan }}
           groups={groups}
-          empty={emptyKind(data?.scan)}
-          failure={failure}
-          scanning={scanning}
-          onScan={runScan}
-          onPatch={patch}
-          pendingId={update.isPending ? update.variables?.id : undefined}
+          edit={{ patch, pendingId: update.isPending ? update.variables?.id : undefined }}
         />
       </div>
 
