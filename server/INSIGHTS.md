@@ -13,6 +13,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Tool & Library Notes
 <!-- dependency quirks, version-specific behaviour, CLI gotchas -->
+- **Split a schema change that adds AND drops columns on one table into two `pnpm db:generate` runs (add first, drop second)** — drizzle-kit asks "is this a rename?" for every added column and, without a TTY (agent shell, CI), fails with `Error: Interactive prompts require a TTY terminal (process.stdin.isTTY or process.stdout.isTTY is false)`. Keep the old column in the schema for the first run, remove it for the second. Evidence: `src/db/migrations/0012_broken_night_thrasher.sql` + `0013_windy_lilandra.sql` (conventions `accepted` → `status`). (2026-11-24)
 - **List a zip's entries with fflate `unzipSync(bytes, { filter: (f) => { …; return false } })`, then decompress only the chosen entry with a second `filter`** — a filter returning false skips decompression, so an archive's scripts/assets are never inflated and `f.originalSize` can be checked first; a throw inside the filter aborts the scan (used for the entry-count cap). Evidence: `src/modules/skills/import.ts` `extractSkillFromArchive`; `test/skills-import.test.ts`. (2026-11-24)
 - **Treat `db.execute(sql…)` as an array of rows (`Array.from(rows, …)`), not `{ rows }`** — with the `postgres-js` driver (`db/client.ts`) Drizzle returns postgres' `RowList`, so the node-postgres `.rows` shape is undefined. Evidence: `src/modules/skills/repository.ts` `distinctTags`; covered by `test/skills.it.test.ts` "lists distinct tags". (2026-11-24)
 
@@ -22,9 +23,11 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-24 — repo conventions (scan job, grounding, accept/reject, skill from conventions) → drizzle-kit add+drop split; open question on unhandled `job.done` rejections.
 - 2026-11-24 — skill import (URL/file/zip), active version → fflate list-without-inflate pattern.
 - 2026-11-24 — skills module + prompt injection → postgres-js `execute` result shape.
 - 2026-11-20 — diagnosed `tool_choice` 400 on a review run → Anthropic-adapter forced-tool error entry.
 
 ## Open Questions
 <!-- unverified hypotheses and unresolved items; move out once answered -->
+- **Does a failed clone/index job crash the API with an unhandled rejection?** — `JobRunner.enqueue` returns `done` (the p-queue promise) which rethrows on failure (`src/platform/jobs.ts`), and no caller attaches a handler (`grep -rn "\.done" src` → only `modules/conventions/service.ts`, which swallows it). Node's default `--unhandled-rejections=throw` would exit; not reproduced. (2026-11-24)

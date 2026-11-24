@@ -85,6 +85,20 @@
       "when": 1795513993335,
       "tag": "0011_low_prism",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795537060448,
+      "tag": "0012_broken_night_thrasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795537064676,
+      "tag": "0013_windy_lilandra",
+      "breakpoints": true
     }
   ]
 }

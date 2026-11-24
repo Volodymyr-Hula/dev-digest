@@ -156,7 +156,9 @@ export const CreateSkillInput = z.object({
   enabled: z.boolean().optional(),
   // Omitted → the server's default for the source (imported → untrusted).
   trusted: z.boolean().optional(),
-  source: z.enum(['manual', 'imported_url', 'imported_file']).default('manual'),
+  source: z.enum(['manual', 'imported_url', 'imported_file', 'extracted']).default('manual'),
+  /** Repo files the skill was derived from (`extracted` skills). */
+  evidence_files: z.array(z.string().min(1)).max(100).optional(),
 });
 export type CreateSkillInput = z.input<typeof CreateSkillInput>;
 
@@ -223,15 +225,79 @@ export const CommunitySkill = z.object({
 export type CommunitySkill = z.infer<typeof CommunitySkill>;
 
 // ---- Conventions ----
+export const ConventionStatus = z.enum(['pending', 'accepted', 'rejected']);
+export type ConventionStatus = z.infer<typeof ConventionStatus>;
+
+/** A house-rule extracted from a repo, grounded in a file path + code snippet. */
 export const ConventionCandidate = z.object({
   id: z.string(),
   rule: z.string(),
   evidence_path: z.string(),
   evidence_snippet: z.string(),
   confidence: z.number().min(0).max(1),
-  accepted: z.boolean(),
+  status: ConventionStatus,
+  /** Set once the convention went into a skill; null again if that skill is deleted. */
+  skill_id: z.string().nullable(),
+  created_at: z.string(),
 });
 export type ConventionCandidate = z.infer<typeof ConventionCandidate>;
+
+/** State of the latest conventions scan job for a repo. */
+export const ConventionScanState = z.object({
+  status: z.enum(['queued', 'running', 'done', 'failed']),
+  error: z.string().nullable(),
+  started_at: z.string().nullable(),
+  finished_at: z.string().nullable(),
+});
+export type ConventionScanState = z.infer<typeof ConventionScanState>;
+
+export const ConventionStats = z.object({
+  accepted: z.number().int(),
+  rejected: z.number().int(),
+  in_skills: z.number().int(),
+});
+export type ConventionStats = z.infer<typeof ConventionStats>;
+
+export const ConventionsResponse = z.object({
+  scan: ConventionScanState.nullable(),
+  items: z.array(ConventionCandidate),
+  stats: ConventionStats,
+});
+export type ConventionsResponse = z.infer<typeof ConventionsResponse>;
+
+export const UpdateConventionInput = z
+  .object({
+    rule: z.string().trim().min(1).max(2000).optional(),
+    status: ConventionStatus.optional(),
+  })
+  .refine((v) => v.rule !== undefined || v.status !== undefined, 'Nothing to update');
+export type UpdateConventionInput = z.infer<typeof UpdateConventionInput>;
+
+/** Mark accepted conventions as included in a just-created skill. */
+export const AttachConventionsInput = z.object({
+  skill_id: z.string().uuid(),
+  ids: z.array(z.string().uuid()).min(1).max(500),
+});
+export type AttachConventionsInput = z.infer<typeof AttachConventionsInput>;
+
+/** LLM step 1: pick representative files from the ranked sample. */
+export const ConventionFileSelection = z.object({
+  paths: z.array(z.string()),
+});
+export type ConventionFileSelection = z.infer<typeof ConventionFileSelection>;
+
+/** LLM step 2: conventions with evidence from the files read. */
+export const ConventionExtraction = z.object({
+  conventions: z.array(
+    z.object({
+      rule: z.string(),
+      evidence_path: z.string(),
+      evidence_snippet: z.string(),
+      confidence: z.number(),
+    }),
+  ),
+});
+export type ConventionExtraction = z.infer<typeof ConventionExtraction>;
 
 // ---- Agents ----
 // 'openrouter' routes through the OpenAI-compatible API (OpenAIProvider with a

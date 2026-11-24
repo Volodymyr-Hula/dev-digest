@@ -21,6 +21,14 @@ export interface JobRunnerOptions {
   retries?: number;
 }
 
+/** Per-job overrides of the runner defaults. */
+export interface EnqueueOptions {
+  /** Retries after the first failed attempt (default: the runner's, 2). */
+  retries?: number;
+  /** Per-attempt timeout (default: the runner's, 120 s). */
+  timeoutMs?: number;
+}
+
 export interface EnqueuedJob {
   id: string;
   /** Resolves when the job finishes (or rejects if it ultimately fails). */
@@ -46,7 +54,12 @@ export class JobRunner {
     this.handlers.set(kind, handler);
   }
 
-  async enqueue(workspaceId: string, kind: string, payload: unknown): Promise<EnqueuedJob> {
+  async enqueue(
+    workspaceId: string,
+    kind: string,
+    payload: unknown,
+    opts: EnqueueOptions = {},
+  ): Promise<EnqueuedJob> {
     const handler = this.handlers.get(kind);
     if (!handler) throw new Error(`No job handler registered for kind '${kind}'`);
 
@@ -55,6 +68,8 @@ export class JobRunner {
       .values({ workspaceId, kind, payload: payload as object, status: 'queued' })
       .returning({ id: t.jobs.id });
     const jobId = row!.id;
+    const timeoutMs = opts.timeoutMs ?? this.timeoutMs;
+    const retries = opts.retries ?? this.retries;
 
     const done = this.queue.add(async () => {
       await this.db
@@ -64,14 +79,14 @@ export class JobRunner {
       try {
         await withRetry(
           () =>
-            withTimeout(handler(payload, { jobId }), this.timeoutMs).then(async () => {
+            withTimeout(handler(payload, { jobId }), timeoutMs).then(async () => {
               await this.db
                 .update(t.jobs)
                 .set({ attempts: 1 })
                 .where(eq(t.jobs.id, jobId));
             }),
           {
-            retries: this.retries,
+            retries,
             onRetry: async (attempt) => {
               await this.db
                 .update(t.jobs)

@@ -48,5 +48,6 @@ Fastify 5 + `fastify-type-provider-zod` · Drizzle ORM 0.45 / drizzle-kit 0.31 /
 - Read when you need the boot order, DI container/overrides, adapters and mocks, module layering, `JobRunner`, the SSE run bus or why the host/origin guard exists: [docs/architecture.md](docs/architecture.md)
 - Read when changing the review cycle (run creation, executor, grounding, scoring, persistence, cancel/reaper, SSE, cost): [specs/review-flow.md](specs/review-flow.md)
 - Read when changing repo import, PR sync/polling, PR detail or the `needs_review`/`reviewed`/`stale` status: [specs/pr-import.md](specs/pr-import.md)
+- Read when changing convention extraction (scan job, grounding, accept/reject, skill from conventions): [specs/conventions.md](specs/conventions.md)
 - Read when changing error handling, status codes, the host/origin guard, rate limits or health routes: [specs/api-error-envelope.md](specs/api-error-envelope.md)
 - Read before starting work here and update at the end of the task, via the `engineering-insights` skill: [INSIGHTS.md](INSIGHTS.md)

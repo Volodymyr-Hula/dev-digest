@@ -55,6 +55,7 @@ export class SkillsService {
       tags: normalizeTags(input.tags ?? []),
       trusted: input.trusted ?? defaultTrusted(source),
       enabled: input.enabled ?? true,
+      evidenceFiles: input.evidence_files ?? null,
     });
     return toSkillDto(row, 0);
   }

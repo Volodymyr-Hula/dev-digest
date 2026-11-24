@@ -6,6 +6,8 @@ import type {
   CodeIndex,
   Embedder,
   LLMProvider,
+  FeatureModelChoice,
+  FeatureModelId,
 } from '@devdigest/shared';
 import type { AppConfig } from './config.js';
 import type { Db } from '../db/client.js';
@@ -27,6 +29,7 @@ import { AgentsRepository } from '../modules/agents/repository.js';
 import { ReviewRepository } from '../modules/reviews/repository.js';
 import type { RepoIntel } from '../modules/repo-intel/types.js';
 import { RepoIntelService } from '../modules/repo-intel/service.js';
+import { resolveFeatureModel } from '../modules/settings/feature-models.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
 import { type Tokenizer, TiktokenTokenizer } from '../adapters/tokenizer/index.js';
 import { type RemoteFetcher, HttpRemoteFetcher } from '../adapters/http/index.js';
@@ -169,6 +172,15 @@ export class Container {
     if (!token) throw new ConfigError('GITHUB_TOKEN is not configured');
     this._github = new OctokitGitHubClient(token);
     return this._github;
+  }
+
+  /**
+   * The workspace's provider+model for a system LLM feature (Settings →
+   * feature models), else the registry default. Exposed here so feature
+   * modules don't import the settings module.
+   */
+  resolveFeatureModel(workspaceId: string, id: FeatureModelId): Promise<FeatureModelChoice> {
+    return resolveFeatureModel(this, workspaceId, id);
   }
 
   /** Resolve an LLM provider by id; constructs from the secret key, cached. */

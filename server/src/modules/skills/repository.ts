@@ -22,6 +22,7 @@ export interface InsertSkill {
   tags: string[];
   trusted: boolean;
   enabled: boolean;
+  evidenceFiles?: string[] | null;
 }
 
 export interface UpdateSkill {
