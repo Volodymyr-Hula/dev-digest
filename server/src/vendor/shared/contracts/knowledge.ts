@@ -234,6 +234,10 @@ export const ConventionCandidate = z.object({
   rule: z.string(),
   evidence_path: z.string(),
   evidence_snippet: z.string(),
+  /** 1-based inclusive line range of the snippet in the file; null for rows grounded before it was stored. */
+  evidence_lines: z.object({ start: z.number().int(), end: z.number().int() }).nullable(),
+  /** GitHub permalink to the snippet at the commit indexed when the scan ran; null when unknown. */
+  evidence_url: z.string().nullable(),
   confidence: z.number().min(0).max(1),
   status: ConventionStatus,
   /** Set once the convention went into a skill; null again if that skill is deleted. */
@@ -242,10 +246,23 @@ export const ConventionCandidate = z.object({
 });
 export type ConventionCandidate = z.infer<typeof ConventionCandidate>;
 
+/** Why a scan failed — stable for UI messages; `error` keeps the raw text. */
+export const ConventionScanErrorCode = z.enum([
+  'not_indexed',
+  'no_readable_files',
+  'llm_failed',
+  'timeout',
+  'interrupted',
+  'unknown',
+]);
+export type ConventionScanErrorCode = z.infer<typeof ConventionScanErrorCode>;
+
 /** State of the latest conventions scan job for a repo. */
 export const ConventionScanState = z.object({
   status: z.enum(['queued', 'running', 'done', 'failed']),
   error: z.string().nullable(),
+  /** Set when `status === 'failed'`. */
+  error_code: ConventionScanErrorCode.nullable(),
   started_at: z.string().nullable(),
   finished_at: z.string().nullable(),
 });
@@ -280,13 +297,7 @@ export const AttachConventionsInput = z.object({
 });
 export type AttachConventionsInput = z.infer<typeof AttachConventionsInput>;
 
-/** LLM step 1: pick representative files from the ranked sample. */
-export const ConventionFileSelection = z.object({
-  paths: z.array(z.string()),
-});
-export type ConventionFileSelection = z.infer<typeof ConventionFileSelection>;
-
-/** LLM step 2: conventions with evidence from the files read. */
+/** The scan's single LLM call: conventions with evidence from the files read (files are picked by code). */
 export const ConventionExtraction = z.object({
   conventions: z.array(
     z.object({

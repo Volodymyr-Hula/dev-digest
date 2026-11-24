@@ -2,6 +2,7 @@ import type {
   ChatMessage,
   ConventionCandidate,
   ConventionExtraction,
+  ConventionScanErrorCode,
   ConventionScanState,
   ConventionStats,
 } from '@devdigest/shared';
@@ -9,20 +10,50 @@ import { wrapUntrusted } from '../../platform/prompt.js';
 import type { ConventionRow, JobRow } from '../../db/rows.js';
 import {
   INTERRUPTED_ERROR,
+  MAX_PER_DIR,
   QUEUED_STALE_MS,
+  RULE_SIMILARITY,
   RUNNING_GRACE_MS,
+  SCAN_ERRORS,
   SCAN_TIMEOUT_MS,
-  SELECT_MAX,
+  TIMEOUT_ERROR_PREFIX,
 } from './constants.js';
 
 /** Pure helpers for the conventions module — DTO mapping, job staleness, grounding, prompts. */
 
-export function toConventionDto(row: ConventionRow): ConventionCandidate {
+export interface RepoCoords {
+  owner: string;
+  name: string;
+}
+
+/** GitHub permalink to the evidence lines at the commit the scan grounded them on. */
+export function evidenceUrl(
+  repo: RepoCoords,
+  row: Pick<ConventionRow, 'evidencePath' | 'evidenceSha' | 'evidenceLineStart' | 'evidenceLineEnd'>,
+): string | null {
+  if (!row.evidenceSha || !row.evidencePath) return null;
+  const path = row.evidencePath.split('/').map(encodeURIComponent).join('/');
+  const base =
+    `https://github.com/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}` +
+    `/blob/${row.evidenceSha}/${path}`;
+  if (row.evidenceLineStart == null || row.evidenceLineEnd == null) return base;
+  return row.evidenceLineStart === row.evidenceLineEnd
+    ? `${base}#L${row.evidenceLineStart}`
+    : `${base}#L${row.evidenceLineStart}-L${row.evidenceLineEnd}`;
+}
+
+/** `repo` null (a row without a repo) → no `evidence_url`. */
+export function toConventionDto(row: ConventionRow, repo: RepoCoords | null): ConventionCandidate {
   return {
     id: row.id,
     rule: row.rule,
     evidence_path: row.evidencePath ?? '',
     evidence_snippet: row.evidenceSnippet ?? '',
+    evidence_lines:
+      row.evidenceLineStart != null && row.evidenceLineEnd != null
+        ? { start: row.evidenceLineStart, end: row.evidenceLineEnd }
+        : null,
+    evidence_url: repo ? evidenceUrl(repo, row) : null,
     confidence: row.confidence ?? 0,
     status: row.status,
     skill_id: row.skillId,
@@ -59,12 +90,26 @@ export function isActiveJob(job: JobRow | undefined, now: Date): boolean {
   return !!job && (job.status === 'queued' || job.status === 'running') && !isStaleJob(job, now);
 }
 
+/** Map a stored `jobs.error` to a stable code (messages from `SCAN_ERRORS` / `TimeoutError`). */
+export function scanErrorCode(error: string | null): ConventionScanErrorCode {
+  if (!error) return 'unknown';
+  if (error === INTERRUPTED_ERROR) return 'interrupted';
+  if (error.startsWith(TIMEOUT_ERROR_PREFIX)) return 'timeout';
+  for (const [code, message] of Object.entries(SCAN_ERRORS)) {
+    if (error.startsWith(message)) return code as ConventionScanErrorCode;
+  }
+  return 'unknown';
+}
+
 export function toScanState(job: JobRow | undefined, now: Date): ConventionScanState | null {
   if (!job) return null;
   const stale = isStaleJob(job, now);
+  const status = stale ? 'failed' : job.status;
+  const error = stale ? INTERRUPTED_ERROR : job.error;
   return {
-    status: stale ? 'failed' : job.status,
-    error: stale ? INTERRUPTED_ERROR : job.error,
+    status,
+    error,
+    error_code: status === 'failed' ? scanErrorCode(error) : null,
     started_at: job.startedAt?.toISOString() ?? null,
     finished_at: job.finishedAt?.toISOString() ?? null,
   };
@@ -75,52 +120,129 @@ export function normalizeWs(s: string): string {
   return s.replace(/\s+/g, ' ').trim();
 }
 
-export function snippetInFile(snippet: string, content: string): boolean {
+/**
+ * Where a snippet occurs in a file, modulo whitespace: 1-based inclusive line
+ * range, or null when it does not occur (or is blank). Builds the whitespace-
+ * normalized text of the file with the source line of every character, so the
+ * match is exactly `normalizeWs(content).includes(normalizeWs(snippet))`.
+ */
+export function locateSnippet(snippet: string, content: string): { start: number; end: number } | null {
   const needle = normalizeWs(snippet);
-  return needle.length > 0 && normalizeWs(content).includes(needle);
+  if (!needle) return null;
+  let text = '';
+  const lineOf: number[] = [];
+  content.split(/\r?\n/).forEach((line, i) => {
+    for (const token of line.split(/\s+/)) {
+      if (!token) continue;
+      if (text) {
+        text += ' ';
+        lineOf.push(i + 1);
+      }
+      text += token;
+      for (let k = 0; k < token.length; k += 1) lineOf.push(i + 1);
+    }
+  });
+  const at = text.indexOf(needle);
+  if (at < 0) return null;
+  return { start: lineOf[at]!, end: lineOf[at + needle.length - 1]! };
 }
 
-/** Model-picked paths that are in the offered list, deduped, capped; top-N when none survive. */
-export function pickPaths(chosen: readonly string[], offered: readonly string[]): string[] {
-  const allowed = new Set(offered);
-  const out: string[] = [];
-  for (const p of chosen) {
-    if (allowed.has(p) && !out.includes(p)) out.push(p);
-    if (out.length >= SELECT_MAX) break;
+/**
+ * Up to `max` paths in rank order, at most `MAX_PER_DIR` from one directory so
+ * the sample covers several areas; slots left over are filled by rank.
+ */
+export function diversifyPaths(ranked: readonly string[], max: number): string[] {
+  const dirOf = (p: string) => p.slice(0, Math.max(0, p.lastIndexOf('/')));
+  const perDir = new Map<string, number>();
+  const picked: string[] = [];
+  for (const p of ranked) {
+    if (picked.length >= max) break;
+    const n = perDir.get(dirOf(p)) ?? 0;
+    if (n >= MAX_PER_DIR || picked.includes(p)) continue;
+    perDir.set(dirOf(p), n + 1);
+    picked.push(p);
   }
-  return out.length > 0 ? out : offered.slice(0, SELECT_MAX);
+  for (const p of ranked) {
+    if (picked.length >= max) break;
+    if (!picked.includes(p)) picked.push(p);
+  }
+  return picked;
+}
+
+const STOP_WORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'of', 'to', 'in', 'on', 'for', 'with', 'by', 'as', 'at', 'from',
+  'is', 'are', 'be', 'it', 'its', 'that', 'this', 'every', 'each', 'all', 'always', 'use', 'uses',
+  'should', 'must',
+]);
+
+/** Content words of a rule — lowercase alphanumerics without stop words. */
+export function ruleTokens(rule: string): Set<string> {
+  return new Set(
+    rule
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length > 1 && !STOP_WORDS.has(w)),
+  );
+}
+
+export function jaccard(a: ReadonlySet<string>, b: ReadonlySet<string>): number {
+  if (a.size === 0 && b.size === 0) return 1;
+  let both = 0;
+  for (const w of a) if (b.has(w)) both += 1;
+  return both / (a.size + b.size - both);
+}
+
+export interface KnownConvention {
+  rule: string;
+  evidencePath: string | null;
+  evidenceSnippet: string | null;
 }
 
 export interface GroundedConvention {
   rule: string;
   evidencePath: string;
   evidenceSnippet: string;
+  evidenceLineStart: number;
+  evidenceLineEnd: number;
   confidence: number;
 }
 
+const evidenceKey = (path: string, snippet: string) => `${path}\n${normalizeWs(snippet)}`;
+
 /**
  * Keep a candidate only when its evidence is real: the path is one of the files
- * read and the snippet occurs in that file. Drops empty/duplicate rules and
- * exact repeats of known (accepted/rejected) rules.
+ * read and the snippet occurs in that file. Drops empty rules and repeats — of
+ * a known (accepted/rejected) convention or of an earlier candidate — where a
+ * repeat is the same evidence (path + snippet) or a rule whose content words
+ * overlap by at least `RULE_SIMILARITY` (Jaccard).
  */
 export function groundCandidates(
   candidates: ConventionExtraction['conventions'],
   files: ReadonlyMap<string, string>,
-  knownRules: readonly string[] = [],
+  known: readonly KnownConvention[] = [],
 ): GroundedConvention[] {
-  const seen = new Set(knownRules.map((r) => normalizeWs(r).toLowerCase()));
+  const seenRules = known.map((k) => ruleTokens(k.rule));
+  const seenEvidence = new Set(
+    known.flatMap((k) => (k.evidencePath && k.evidenceSnippet ? [evidenceKey(k.evidencePath, k.evidenceSnippet)] : [])),
+  );
   const out: GroundedConvention[] = [];
   for (const c of candidates) {
     const rule = c.rule.trim();
-    const key = normalizeWs(rule).toLowerCase();
     const content = files.get(c.evidence_path);
-    if (!rule || seen.has(key) || content === undefined) continue;
-    if (!snippetInFile(c.evidence_snippet, content)) continue;
-    seen.add(key);
+    if (!rule || content === undefined) continue;
+    const lines = locateSnippet(c.evidence_snippet, content);
+    if (!lines) continue;
+    const tokens = ruleTokens(rule);
+    const ev = evidenceKey(c.evidence_path, c.evidence_snippet);
+    if (seenEvidence.has(ev) || seenRules.some((r) => jaccard(r, tokens) >= RULE_SIMILARITY)) continue;
+    seenEvidence.add(ev);
+    seenRules.push(tokens);
     out.push({
       rule,
       evidencePath: c.evidence_path,
       evidenceSnippet: c.evidence_snippet.replace(/^\n+|\s+$/g, ''),
+      evidenceLineStart: lines.start,
+      evidenceLineEnd: lines.end,
       confidence: Number.isFinite(c.confidence) ? Math.min(1, Math.max(0, c.confidence)) : 0,
     });
   }
@@ -133,22 +255,6 @@ const DATA_GUARD =
 
 /** `wrapUntrusted` puts the label in an attribute — keep it quote-free. */
 const label = (s: string) => s.replace(/["<>\n]/g, '_');
-
-export function buildSelectionMessages(paths: readonly string[]): ChatMessage[] {
-  return [
-    {
-      role: 'system',
-      content:
-        'You pick source files that best reveal the coding conventions of a codebase ' +
-        '(naming, structure, error handling, data access, testing style, component patterns). ' +
-        `Choose up to ${SELECT_MAX} files from the list, covering different layers and areas ` +
-        'rather than several files of the same kind. Prefer files with real logic over ' +
-        're-export barrels or plain type lists. Return paths exactly as listed.\n' +
-        DATA_GUARD,
-    },
-    { role: 'user', content: wrapUntrusted('file-list', paths.join('\n')) },
-  ];
-}
 
 export function buildExtractionMessages(
   files: ReadonlyMap<string, string>,

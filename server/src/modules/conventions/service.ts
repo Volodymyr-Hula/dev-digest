@@ -1,6 +1,5 @@
 import {
   ConventionExtraction,
-  ConventionFileSelection,
   type AttachConventionsInput,
   type ConventionCandidate,
   type ConventionsResponse,
@@ -14,13 +13,19 @@ import type { JobRunner } from '../../platform/jobs.js';
 import { ConflictError, NotFoundError, ValidationError } from '../../platform/errors.js';
 import type { RepoIntel } from '../repo-intel/types.js';
 import type { ConventionsRepository } from './repository.js';
-import { FILE_CHAR_CAP, SAMPLE_N, SCAN_JOB_KIND, SCAN_TIMEOUT_MS } from './constants.js';
+import {
+  FILE_CHAR_CAP,
+  SAMPLE_N,
+  SCAN_ERRORS,
+  SCAN_JOB_KIND,
+  SCAN_TIMEOUT_MS,
+  SELECT_MAX,
+} from './constants.js';
 import {
   buildExtractionMessages,
-  buildSelectionMessages,
+  diversifyPaths,
   groundCandidates,
   isActiveJob,
-  pickPaths,
   statsOf,
   toConventionDto,
   toScanState,
@@ -61,14 +66,14 @@ export class ConventionsService {
   }
 
   async list(workspaceId: string, repoId: string): Promise<ConventionsResponse> {
-    await this.requireRepo(workspaceId, repoId);
+    const repo = await this.requireRepo(workspaceId, repoId);
     const [rows, job] = await Promise.all([
       this.deps.repo.listByRepo(workspaceId, repoId),
       this.deps.repo.latestScanJob(workspaceId, repoId),
     ]);
     return {
       scan: toScanState(job, this.now()),
-      items: rows.map(toConventionDto),
+      items: rows.map((r) => toConventionDto(r, repo)),
       stats: statsOf(rows),
     };
   }
@@ -89,23 +94,15 @@ export class ConventionsService {
     return { jobId: job.id };
   }
 
-  /** The job body: sample → pick files → read → extract → ground → replace pending. */
+  /**
+   * The job body: code picks the files (ranked sample → per-directory spread),
+   * one LLM call extracts conventions, code grounds them and replaces `pending`.
+   */
   async runScan({ workspaceId, repoId }: ScanPayload): Promise<void> {
     const repo = await this.requireRepo(workspaceId, repoId);
-    const offered = await this.deps.repoIntel.getConventionSamples(repoId, SAMPLE_N);
-    if (offered.length === 0) {
-      throw new ValidationError('Repo is not indexed yet — no files to sample');
-    }
-    const choice = await this.deps.resolveModel(workspaceId);
-    const llm = await this.deps.llm(choice.provider);
-
-    const selection = await llm.completeStructured({
-      model: choice.model,
-      schema: ConventionFileSelection,
-      schemaName: 'ConventionFileSelection',
-      messages: buildSelectionMessages(offered),
-    });
-    const paths = pickPaths(selection.data.paths, offered);
+    const ranked = await this.deps.repoIntel.getConventionSamples(repoId, SAMPLE_N);
+    if (ranked.length === 0) throw new ValidationError(SCAN_ERRORS.not_indexed);
+    const paths = diversifyPaths(ranked, SELECT_MAX);
 
     const git = this.deps.git();
     const ref = { owner: repo.owner, name: repo.name };
@@ -117,23 +114,27 @@ export class ConventionsService {
         // unreadable (deleted since indexing, escapes the clone) — skip it
       }
     }
-    if (files.size === 0) throw new ValidationError('None of the sampled files could be read');
+    if (files.size === 0) throw new ValidationError(SCAN_ERRORS.no_readable_files);
 
     const known = await this.deps.repo.knownRules(repoId);
     const capped = new Map([...files].map(([p, c]) => [p, c.slice(0, FILE_CHAR_CAP)]));
-    const extraction = await llm.completeStructured({
-      model: choice.model,
-      schema: ConventionExtraction,
-      schemaName: 'ConventionExtraction',
-      messages: buildExtractionMessages(capped, known),
-    });
+    let extraction: ConventionExtraction;
+    try {
+      const choice = await this.deps.resolveModel(workspaceId);
+      const llm = await this.deps.llm(choice.provider);
+      const res = await llm.completeStructured({
+        model: choice.model,
+        schema: ConventionExtraction,
+        schemaName: 'ConventionExtraction',
+        messages: buildExtractionMessages(capped, known),
+      });
+      extraction = res.data;
+    } catch (e) {
+      throw new Error(`${SCAN_ERRORS.llm_failed}: ${(e as Error).message}`);
+    }
 
-    const grounded = groundCandidates(
-      extraction.data.conventions,
-      files,
-      known.map((k) => k.rule),
-    );
-    await this.deps.repo.replacePending(workspaceId, repoId, grounded);
+    const grounded = groundCandidates(extraction.conventions, files, known);
+    await this.deps.repo.replacePending(workspaceId, repoId, repo.lastIndexedSha, grounded);
   }
 
   async update(
@@ -149,7 +150,8 @@ export class ConventionsService {
       ...(patch.status !== undefined ? { status: patch.status } : {}),
     });
     if (!updated) throw new NotFoundError('Convention not found');
-    return toConventionDto(updated);
+    const repo = updated.repoId ? await this.deps.repo.getRepo(workspaceId, updated.repoId) : undefined;
+    return toConventionDto(updated, repo ?? null);
   }
 
   /** Mark accepted conventions as part of a just-created skill. Idempotent. */

@@ -23,7 +23,6 @@ const SERVICE = "import { repo } from './repository.js';\n\nexport class Service
 const FILES = { 'src/routes.ts': ROUTE, 'src/service.ts': SERVICE };
 const SAMPLES = ['src/routes.ts', 'src/service.ts', 'src/missing.ts'];
 
-const SELECTION = { paths: ['src/routes.ts', 'src/service.ts', 'not/offered.ts'] };
 const EXTRACTION = {
   conventions: [
     {
@@ -73,11 +72,11 @@ d('conventions API', () => {
     return row!.id;
   }
 
-  function makeApp(llm: MockLLMProvider = new MockLLMProvider('openai', {
-    structuredBySchema: { ConventionFileSelection: SELECTION, ConventionExtraction: EXTRACTION },
-  })) {
+  const mockLlm = () => new MockLLMProvider('openai', { structuredBySchema: { ConventionExtraction: EXTRACTION } });
+
+  function makeApp(llm: MockLLMProvider = mockLlm(), samples: string[] = SAMPLES) {
     const config = loadConfig({ ...process.env, NODE_ENV: 'test' } as NodeJS.ProcessEnv);
-    const repoIntel = { getConventionSamples: async () => SAMPLES } as unknown as RepoIntel;
+    const repoIntel = { getConventionSamples: async () => samples } as unknown as RepoIntel;
     return buildApp({
       config,
       db: pg.handle.db,
@@ -98,15 +97,16 @@ d('conventions API', () => {
     return (await app.inject({ method: 'GET', url: `/repos/${repoId}/conventions` })).json();
   }
 
-  it('scans: two LLM steps, only grounded candidates land as pending', async () => {
-    const llm = new MockLLMProvider('openai', {
-      structuredBySchema: { ConventionFileSelection: SELECTION, ConventionExtraction: EXTRACTION },
-    });
+  it('scans: one LLM call over code-picked files, only grounded candidates land as pending, with a GitHub permalink', async () => {
+    const llm = mockLlm();
     const app = await makeApp(llm);
     const repoId = await newRepo();
+    await pg.handle.db
+      .insert(t.repoIndexState)
+      .values({ repoId, lastIndexedSha: 'deadbeef', indexerVersion: 1, status: 'full' });
     const body = await scan(app, repoId);
 
-    expect(body.scan).toMatchObject({ status: 'done', error: null });
+    expect(body.scan).toMatchObject({ status: 'done', error: null, error_code: null });
     expect(body.items.map((c: { rule: string }) => c.rule).sort()).toEqual([
       'Relative imports carry the .js suffix',
       'Route handlers delegate to one service call',
@@ -114,7 +114,16 @@ d('conventions API', () => {
     expect(body.items[0]).toMatchObject({ status: 'pending', skill_id: null, confidence: 0.9 });
     expect(body.stats).toEqual({ accepted: 0, rejected: 0, in_skills: 0 });
     const schemas = llm.calls.map((c) => (c.req as { schemaName: string }).schemaName);
-    expect(schemas).toEqual(['ConventionFileSelection', 'ConventionExtraction']);
+    expect(schemas).toEqual(['ConventionExtraction']);
+    const prompt = (llm.calls[0]!.req as { messages: { content: string }[] }).messages[1]!.content;
+    expect(prompt).toContain('// path: src/routes.ts');
+    expect(prompt).toContain('// path: src/service.ts');
+
+    const route = body.items.find((c: { evidence_path: string }) => c.evidence_path === 'src/routes.ts');
+    expect(route).toMatchObject({
+      evidence_lines: { start: 2, end: 2 },
+      evidence_url: `https://github.com/conv/${'repo-' + n}/blob/deadbeef/src/routes.ts#L2`,
+    });
     await app.close();
   });
 
@@ -127,9 +136,7 @@ d('conventions API', () => {
     await app.inject({ method: 'PATCH', url: `/conventions/${b.id}`, payload: { status: 'rejected' } });
     await app.close();
 
-    const llm = new MockLLMProvider('openai', {
-      structuredBySchema: { ConventionFileSelection: SELECTION, ConventionExtraction: EXTRACTION },
-    });
+    const llm = mockLlm();
     const app2 = await makeApp(llm);
     const second = await scan(app2, repoId);
     const extraction = llm.calls.find((c) => (c.req as { schemaName: string }).schemaName === 'ConventionExtraction');
@@ -140,8 +147,9 @@ d('conventions API', () => {
     const byStatus = (s: string) => second.items.filter((c: { status: string }) => c.status === s);
     expect(byStatus('accepted').map((c: { rule: string }) => c.rule)).toEqual(['Edited rule']);
     expect(byStatus('rejected')).toHaveLength(1);
-    // `a`'s original text is new again (the model re-proposed it); `b`'s exact text is known → dropped.
-    expect(byStatus('pending').map((c: { rule: string }) => c.rule)).toEqual([a.rule]);
+    // The model re-proposed both: `a` under its original text (same evidence as the edited, accepted
+    // one), `b` verbatim — code drops both, so nothing known comes back as pending.
+    expect(byStatus('pending')).toEqual([]);
     expect(second.stats).toEqual({ accepted: 1, rejected: 1, in_skills: 0 });
     await app2.close();
   });
@@ -171,9 +179,48 @@ d('conventions API', () => {
     const repoId = await newRepo();
     const body = await scan(app, repoId);
     expect(llm.calls).toHaveLength(1);
-    expect(body.scan).toMatchObject({ status: 'failed', error: 'provider exploded' });
+    expect(body.scan).toMatchObject({
+      status: 'failed',
+      error: 'Model call failed: provider exploded',
+      error_code: 'llm_failed',
+    });
     expect(body.items).toEqual([]);
     await app.close();
+  });
+
+  it('an unindexed repo fails with not_indexed and never calls the model', async () => {
+    const llm = mockLlm();
+    const app = await makeApp(llm, []);
+    const body = await scan(app, await newRepo());
+    expect(body.scan).toMatchObject({ status: 'failed', error_code: 'not_indexed' });
+    expect(llm.calls).toHaveLength(0);
+    await app.close();
+  });
+
+  it('re-scan drops a rephrased accepted convention', async () => {
+    const repoId = await newRepo();
+    const first = await scan(await makeApp(), repoId);
+    const app = await makeApp();
+    for (const c of first.items) {
+      await app.inject({ method: 'PATCH', url: `/conventions/${c.id}`, payload: { status: 'accepted' } });
+    }
+    await app.close();
+
+    const rephrased = {
+      conventions: [
+        {
+          rule: 'Route handlers must delegate to one single service call',
+          evidence_path: 'src/service.ts',
+          evidence_snippet: 'return repo.all();',
+          confidence: 0.7,
+        },
+      ],
+    };
+    const app2 = await makeApp(new MockLLMProvider('openai', { structuredBySchema: { ConventionExtraction: rephrased } }));
+    const second = await scan(app2, repoId);
+    expect(second.items.filter((c: { status: string }) => c.status === 'pending')).toEqual([]);
+    expect(second.stats.accepted).toBe(2);
+    await app2.close();
   });
 
   it('PATCH validates input, 404s unknown ids', async () => {

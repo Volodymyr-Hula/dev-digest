@@ -25,15 +25,16 @@ The user scans a cloned, indexed repo for house-rules ("conventions"), sees each
 - **CV-2** Derived states: `pending` — awaiting a decision; `accepted ∧ skill_id = null` — offered in the create-skill modal; `accepted ∧ skill_id ≠ null` — already in a skill, excluded from the modal; `rejected` — kept for stats and the re-scan prompt.
 - **CV-3** Deleting a skill sets `skill_id = null` on its conventions (FK), so they become available for a new skill without extra code.
 - **CV-4** Rows are never deleted except `pending` rows on re-scan (CV-12).
+- **CV-4a** `evidence_sha`, `evidence_line_start`, `evidence_line_end` (nullable, migration `0014`) — the repo's `repo_index_state.last_indexed_sha` at scan time and the snippet's 1-based inclusive line range. Rows grounded before `0014` have them null.
 
 ## Contracts (`vendor/shared/contracts/knowledge.ts`, mirrored into the client copy)
 
-- `ConventionStatus`; `ConventionCandidate { id, rule, evidence_path, evidence_snippet, confidence, status, skill_id, created_at }`.
-- `ConventionScanState { status: queued|running|done|failed, error, started_at, finished_at }`.
+- `ConventionStatus`; `ConventionCandidate { id, rule, evidence_path, evidence_snippet, evidence_lines: {start,end} | null, evidence_url: string | null, confidence, status, skill_id, created_at }`.
+- `ConventionScanState { status: queued|running|done|failed, error, error_code, started_at, finished_at }`; `error_code` (`ConventionScanErrorCode`: `not_indexed | no_readable_files | llm_failed | timeout | interrupted | unknown`) is set only when `failed`.
 - `ConventionStats { accepted, rejected, in_skills }`.
 - `ConventionsResponse { scan: ConventionScanState | null, items, stats }`.
 - `UpdateConventionInput { rule?, status? }`; `AttachConventionsInput { skill_id, ids }`.
-- LLM schemas: `ConventionFileSelection { paths }`, `ConventionExtraction { conventions: { rule, evidence_path, evidence_snippet, confidence }[] }` — schema names match the mock's `structuredBySchema` keys.
+- LLM schema: `ConventionExtraction { conventions: { rule, evidence_path, evidence_snippet, confidence }[] }` — the schema name matches the mock's `structuredBySchema` key.
 - `CreateSkillInput.source` adds `'extracted'`; new optional `evidence_files: string[]`, persisted to `skills.evidence_files`.
 
 ## API (`modules/conventions`, onion layering)
@@ -52,37 +53,38 @@ The user scans a cloned, indexed repo for house-rules ("conventions"), sees each
 
 - **CV-7** The scan runs as a `JobRunner` job with `retries: 0` and a 180 s timeout (`constants.ts`). `JobRunner.enqueue` takes `opts?: { retries?, timeoutMs? }` (`platform/jobs.ts`); existing callers keep 2 retries / 120 s. Reason: a retried LLM failure would triple the cost. The timeout marks the job failed but does not abort the handler (`withTimeout` only races), so a slow scan may still write its result afterwards. `startScan` swallows the job's `done` rejection; the outcome lives on the `jobs` row.
 - **CV-8** `scan` in the GET response is the latest `jobs` row with `kind='conventions.scan'` and `payload.repoId = repoId`. A `running` row older than timeout + 30 s, or a `queued` row older than 10 min (the queue is shared with indexing), is reported as `failed` with `error: 'interrupted'` (`helpers.ts` `isStaleJob`) and does not block a new scan — `jobs` rows are not reaped on boot (`reapStaleRuns` covers `agent_runs` only, `modules/reviews/service.ts:93`).
-- **CV-9** Steps:
-  1. `getConventionSamples(repoId, 40)`; empty ⇒ fail with "Repo is not indexed yet".
-  2. Model from `resolveFeatureModel(…, 'conventions')`.
-  3. `ConventionFileSelection` over the path list picks ≤ 8 files; paths not in the list are dropped; none left ⇒ top 8 by rank.
-  4. Read each file with `git.readFile`; the prompt gets the first 12 000 chars of each (`FILE_CHAR_CAP`), grounding checks the full file; unreadable files are skipped, none readable ⇒ fail.
-  5. `ConventionExtraction` over the files plus the known-rules block (CV-11).
-  6. Grounding (CV-10).
-  7. In one transaction: delete the repo's `pending` rows, insert the grounded candidates as `pending`.
-- **CV-10 Grounding.** A candidate survives only if `evidence_path` is one of the files read in step 4 and `evidence_snippet` occurs in that file (whitespace-normalized). Confidence is clamped to 0..1. Empty rules, duplicates within the answer and exact (whitespace/case-normalized) repeats of known rules are dropped too (`groundCandidates`).
-- **CV-11 Known rules.** The extraction prompt carries the text of every `accepted` and `rejected` rule of the repo (edited text where edited), labelled by status, with no snippets and no count limit, instructing the model not to propose them again or rephrase them. Repo files and known rules are wrapped with `wrapUntrusted`. The model may still rephrase a known rule; no fuzzy dedupe is attempted.
+- **CV-9** Steps — exactly **one** LLM call per scan; files are chosen by code:
+  1. `getConventionSamples(repoId, 40)` (ranked, no tests/configs/migrations); empty ⇒ fail with `SCAN_ERRORS.not_indexed`, no LLM call.
+  2. `diversifyPaths(sample, 8)`: rank order, at most `MAX_PER_DIR` (2) files per directory, leftover slots filled by rank.
+  3. Read each file with `git.readFile`; the prompt gets the first 12 000 chars of each (`FILE_CHAR_CAP`), grounding checks the full file; unreadable files are skipped, none readable ⇒ fail with `SCAN_ERRORS.no_readable_files`.
+  4. Model from `resolveFeatureModel(…, 'conventions')`; `ConventionExtraction` over the files plus the known-rules block (CV-11). Any failure from model resolution to the answer is rethrown as `"Model call failed: <cause>"` (`SCAN_ERRORS.llm_failed`).
+  5. Grounding (CV-10).
+  6. In one transaction: delete the repo's `pending` rows, insert the grounded candidates as `pending` with `evidence_sha = last_indexed_sha` (null when the repo has no index state).
+- **CV-10 Grounding** (code only, no LLM). A candidate survives only if `evidence_path` is one of the files read in step 3 and `evidence_snippet` occurs in that file (whitespace-normalized); `locateSnippet` returns the line range from the same normalized match. Confidence is clamped to 0..1. Empty rules are dropped, and so is a repeat of a known convention or of an earlier candidate: same evidence (path + normalized snippet), or rule content words (lowercase, stop words removed) with Jaccard ≥ `RULE_SIMILARITY` (0.8) (`groundCandidates`).
+- **CV-11 Known rules.** The extraction prompt carries the text of every `accepted` and `rejected` rule of the repo (edited text where edited), labelled by status, with no snippets and no count limit, instructing the model not to propose them again or rephrase them. Repo files and known rules are wrapped with `wrapUntrusted`. A rephrasing that slips through is caught by CV-10 when it reuses the evidence or most of the words.
+- **CV-11a Evidence link.** `evidence_url = https://github.com/<owner>/<name>/blob/<evidence_sha>/<path>#L<start>[-L<end>]` (path segments URL-encoded), built in `toConventionDto`; null without `evidence_sha`.
+- **CV-11b Error codes.** `toScanState` maps `jobs.error` to `error_code` by prefix: `SCAN_ERRORS.*` → its key, `TimeoutError` ("Operation timed out…") → `timeout`, `interrupted` (CV-8) → `interrupted`, else `unknown`.
 - **CV-12 Re-scan** replaces only `pending` rows; `accepted` (with or without `skill_id`) and `rejected` rows are kept.
 
 ## Skill creation
 
-- **CV-13** The client builds the draft body from the accepted, unattached conventions: each rule, its `evidence_path`, and its full `evidence_snippet` in a fenced block (no truncation). Name, description and body are editable in the modal.
+- **CV-13** The client builds the draft body from the accepted, unattached conventions the user selected in the modal (all by default): each rule, its `evidence_path`, and its full `evidence_snippet` in a fenced block (no truncation). Name, description and body are editable. Unselected conventions stay `accepted ∧ skill_id = null`, so several skills can be built from one repo's conventions.
 - **CV-14** Save = `POST /skills { type: 'convention', source: 'extracted', evidence_files, … }` (trusted by default), then `POST …/conventions/attach`. The two calls are not atomic: if attach fails, the skill exists and the conventions stay available; the modal retries attach without re-creating the skill. A name clash is the existing `409` from `SkillsService.assertNameFree`.
 
 ## UI (`client/src/app/repos/[repoId]/conventions`)
 
 - **CV-15** Sidebar item `conventions` in the SKILLS LAB group of `client/src/vendor/ui/nav.ts`, `href: /repos/:repoId/conventions`.
-- **CV-16** Header shows `N accepted · M rejected · K in skills` from `stats`; Run extraction / Re-scan; states empty, scanning, failed (incl. interrupted), load error.
+- **CV-16** Header shows `N accepted · M rejected · K in skills` from `stats`; Run extraction / Re-scan; states never-scanned, nothing new found, scanning, failed (message per `error_code`), load error. Strings live in `client/messages/en/conventions.json`.
 - **CV-17** While `scan.status ∈ {queued, running}` the list query polls (`refetchInterval`); leaving and returning to the page restores the scanning state.
-- **CV-18** Card: rule, `evidence_path`, snippet, confidence, Accept / Reject / inline Edit; read-only once in a skill.
+- **CV-18** Card: rule, `evidence_path:lines` linking to `evidence_url` (new tab), snippet, confidence, Accept / Reject / inline Edit; read-only once in a skill.
 - **CV-19** Client code imports only types from `@devdigest/shared` (see `client/INSIGHTS.md`).
 
 ## Tests
 
-- `server/test/conventions-helpers.test.ts` — grounding, snippet match, stale-job rule, known rules inside `<untrusted>`.
-- `server/test/conventions.it.test.ts` — mock LLM with both schemas: scan → pending; invented snippet / foreign path dropped; top-N fallback; re-scan keeps accepted/rejected and puts them in the prompt; 409 on concurrent scan; stale job → interrupted and rescan allowed; one LLM call on failure (`retries: 0`); PATCH rules; idempotent attach; skill delete → `skill_id = null`.
+- `server/test/conventions-helpers.test.ts` — grounding, `locateSnippet` line ranges, `diversifyPaths`, rule similarity, evidence/rephrase dedupe, `evidenceUrl`, `scanErrorCode`, stale-job rule, known rules inside `<untrusted>`.
+- `server/test/conventions.it.test.ts` — mock LLM: scan → exactly one `ConventionExtraction` call, pending rows with lines + permalink; invented snippet / foreign path dropped; re-scan keeps accepted/rejected, puts them in the prompt and drops re-proposed and rephrased ones; unindexed repo → `not_indexed` without an LLM call; 409 on concurrent scan; stale job → interrupted and rescan allowed; one LLM call on failure (`retries: 0`, `llm_failed`); PATCH rules; idempotent attach; skill delete → `skill_id = null`.
 - `server/test/skills.it.test.ts` — create with `source: 'extracted'` + `evidence_files`.
-- Client RTL — `ConventionCard`, `CreateSkillModal`, body-builder helper.
+- Client RTL — `ConventionCard` (evidence link), `ConventionSkillModal` (subset selection, rebuild), `ConventionsView` (never / none-found / failed states), helpers.
 - E2E — out of scope for now: the e2e stack has no LLM (`e2e/README.md:5`) and flows avoid mutations (`e2e/specs/coverage.md:16`).
 
 ## Verification

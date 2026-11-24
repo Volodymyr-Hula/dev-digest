@@ -12,7 +12,17 @@ export interface NewConvention {
   rule: string;
   evidencePath: string;
   evidenceSnippet: string;
+  evidenceLineStart: number;
+  evidenceLineEnd: number;
   confidence: number;
+}
+
+export interface ScanRepo {
+  id: string;
+  owner: string;
+  name: string;
+  /** Commit of the latest index run; null before the first one. */
+  lastIndexedSha: string | null;
 }
 
 export interface ConventionPatch {
@@ -24,16 +34,20 @@ export interface ConventionPatch {
 export class ConventionsRepository {
   constructor(private readonly db: Db) {}
 
-  /** The repo's clone coordinates, when it belongs to the workspace. */
-  async getRepo(
-    workspaceId: string,
-    repoId: string,
-  ): Promise<{ id: string; owner: string; name: string } | undefined> {
+  /** The repo's clone coordinates and indexed commit, when it belongs to the workspace. */
+  async getRepo(workspaceId: string, repoId: string): Promise<ScanRepo | undefined> {
     const [row] = await this.db
-      .select({ id: t.repos.id, owner: t.repos.owner, name: t.repos.name })
+      .select({
+        id: t.repos.id,
+        owner: t.repos.owner,
+        name: t.repos.name,
+        lastIndexedSha: t.repoIndexState.lastIndexedSha,
+      })
       .from(t.repos)
+      .leftJoin(t.repoIndexState, eq(t.repoIndexState.repoId, t.repos.id))
       .where(and(eq(t.repos.id, repoId), eq(t.repos.workspaceId, workspaceId)));
-    return row;
+    // The indexer writes '' as a placeholder before its first commit lands.
+    return row && { ...row, lastIndexedSha: row.lastIndexedSha || null };
   }
 
   async listByRepo(workspaceId: string, repoId: string): Promise<ConventionRow[]> {
@@ -62,22 +76,34 @@ export class ConventionsRepository {
   }
 
   /** Re-scan: drop the repo's `pending` rows and insert the new candidates, atomically. */
-  async replacePending(workspaceId: string, repoId: string, rows: NewConvention[]): Promise<void> {
+  async replacePending(
+    workspaceId: string,
+    repoId: string,
+    evidenceSha: string | null,
+    rows: NewConvention[],
+  ): Promise<void> {
     await this.db.transaction(async (tx) => {
       await tx
         .delete(t.conventions)
         .where(and(eq(t.conventions.repoId, repoId), eq(t.conventions.status, 'pending')));
       if (rows.length === 0) return;
       await tx.insert(t.conventions).values(
-        rows.map((r) => ({ ...r, workspaceId, repoId, status: 'pending' as const })),
+        rows.map((r) => ({ ...r, evidenceSha, workspaceId, repoId, status: 'pending' as const })),
       );
     });
   }
 
-  /** Accepted + rejected rule texts — the "already known" block of the extraction prompt. */
-  async knownRules(repoId: string): Promise<{ rule: string; status: ConventionStatusValue }[]> {
+  /** Accepted + rejected conventions — the prompt's "already known" block and the re-scan dedupe. */
+  async knownRules(repoId: string): Promise<
+    { rule: string; status: ConventionStatusValue; evidencePath: string | null; evidenceSnippet: string | null }[]
+  > {
     return this.db
-      .select({ rule: t.conventions.rule, status: t.conventions.status })
+      .select({
+        rule: t.conventions.rule,
+        status: t.conventions.status,
+        evidencePath: t.conventions.evidencePath,
+        evidenceSnippet: t.conventions.evidenceSnippet,
+      })
       .from(t.conventions)
       .where(
         and(eq(t.conventions.repoId, repoId), inArray(t.conventions.status, ['accepted', 'rejected'])),

@@ -10,6 +10,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Codebase Patterns
 <!-- unwritten conventions and architectural decisions, with the reason -->
+- **Treat `repo_index_state.last_indexed_sha = ''` as "no commit"** — the indexer inserts the row with an empty-string placeholder before its first commit lands (`src/modules/repo-intel/service.ts:199`), and the column is `NOT NULL`, so `?? fallback` never fires; normalize with `|| null` (as `ConventionsRepository.getRepo` does) before building links or diffs from it. (2026-11-24)
 
 ## Tool & Library Notes
 <!-- dependency quirks, version-specific behaviour, CLI gotchas -->
@@ -23,6 +24,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-24 — conventions: one LLM call, GitHub evidence links, re-scan dedupe, error codes; API Contract Reviewer seed → empty-string `last_indexed_sha` placeholder.
 - 2026-11-24 — repo conventions (scan job, grounding, accept/reject, skill from conventions) → drizzle-kit add+drop split; open question on unhandled `job.done` rejections.
 - 2026-11-24 — skill import (URL/file/zip), active version → fflate list-without-inflate pattern.
 - 2026-11-24 — skills module + prompt injection → postgres-js `execute` result shape.
