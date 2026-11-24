@@ -1,0 +1,1 @@
+CREATE INDEX "conventions_skill_idx" ON "conventions" USING btree ("skill_id");

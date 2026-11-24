@@ -3,6 +3,7 @@ import { startPg, dockerAvailable, type PgFixture } from './helpers/pg.js';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/platform/config.js';
 import { seed } from '../src/db/seed.js';
+import { ConflictError } from '../src/platform/errors.js';
 import * as t from '../src/db/schema.js';
 import { MockGitClient, MockGitHubClient, MockRemoteFetcher } from '../src/adapters/mocks.js';
 import { SkillsRepository } from '../src/modules/skills/repository.js';
@@ -24,9 +25,10 @@ d('skills API', () => {
     'https://raw.githubusercontent.com/o/r/main/SKILL.md': { body: SKILL_MD },
   });
 
+  let workspaceId: string;
   beforeAll(async () => {
     pg = await startPg();
-    await seed(pg.handle.db);
+    ({ workspaceId } = await seed(pg.handle.db));
   });
   afterAll(async () => {
     await pg?.stop();
@@ -100,6 +102,25 @@ d('skills API', () => {
     });
     expect(rename.statusCode).toBe(409);
     await app.close();
+  });
+
+  it('a name clash that slips past the pre-check (concurrent create) is a 409, not a 500', async () => {
+    // Call the repository directly: this is the write the unique index guards when two
+    // requests both pass SkillsService.assertNameFree.
+    const repo = new SkillsRepository(pg.handle.db);
+    const values = {
+      workspaceId,
+      name: `race-${++n}`,
+      description: '',
+      type: 'rubric' as const,
+      source: 'manual' as const,
+      body: 'x',
+      tags: [],
+      trusted: true,
+      enabled: true,
+    };
+    await repo.insert(values);
+    await expect(repo.insert(values)).rejects.toBeInstanceOf(ConflictError);
   });
 
   it('a config edit bumps the version and snapshots it; toggling enabled does not', async () => {

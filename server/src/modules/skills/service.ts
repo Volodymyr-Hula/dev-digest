@@ -6,7 +6,7 @@ import type {
   SkillVersion,
   UpdateSkillInput,
 } from '@devdigest/shared';
-import type { RemoteFetcher } from '../../adapters/http/index.js';
+import type { RemoteFetcher } from './types.js';
 import { ConflictError, ValidationError } from '../../platform/errors.js';
 import { IMPORT_FETCH_TIMEOUT_MS, IMPORT_MAX_FILE_BYTES } from './constants.js';
 import { kindFromName, parseImport, toRawGitHubUrl, type ImportFileKind } from './import.js';

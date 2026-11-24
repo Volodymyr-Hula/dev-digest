@@ -33,7 +33,7 @@ import type {
   SecretKey,
 } from '@devdigest/shared';
 import { parseUnifiedDiff } from './git/diff-parser.js';
-import type { FetchedFile, RemoteFetcher } from './http/index.js';
+import type { FetchedFile, RemoteFetcher } from '../modules/skills/types.js';
 import { AppError } from '../platform/errors.js';
 
 /**

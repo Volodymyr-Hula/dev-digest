@@ -3,6 +3,7 @@ import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import type { SkillSource, SkillType } from '@devdigest/shared';
 import type { SkillRow, SkillVersionRow } from '../../db/rows.js';
+import { ConflictError } from '../../platform/errors.js';
 import { INITIAL_SKILL_VERSION } from './constants.js';
 import { isSkillConfigChange } from './helpers.js';
 
@@ -38,6 +39,30 @@ export interface UpdateSkill {
 export interface SkillWithCount {
   row: SkillRow;
   agentCount: number;
+}
+
+const NAME_UNIQUE_INDEX = 'skills_workspace_name_uq';
+
+/** postgres-js unique violation on the workspace/name index, possibly wrapped by Drizzle (`cause`). */
+function isNameConflict(e: unknown): boolean {
+  for (let cur = e as { code?: string; constraint_name?: string; cause?: unknown } | undefined; cur; cur = cur.cause as typeof cur) {
+    if (cur.code === '23505' && cur.constraint_name === NAME_UNIQUE_INDEX) return true;
+  }
+  return false;
+}
+
+/**
+ * The service checks the name first (`nameTaken`) for a friendly 409, but two
+ * concurrent writes can both pass that check — the unique index is the real
+ * guard, and its violation must surface as the same 409, not a 500.
+ */
+async function guardName<T>(write: Promise<T>): Promise<T> {
+  try {
+    return await write;
+  } catch (e) {
+    if (isNameConflict(e)) throw new ConflictError('A skill with this name already exists');
+    throw e;
+  }
 }
 
 export class SkillsRepository {
@@ -89,14 +114,14 @@ export class SkillsRepository {
 
   /** Insert a skill AND record version 1 in skill_versions. */
   async insert(values: InsertSkill): Promise<SkillRow> {
-    return this.db.transaction(async (tx) => {
+    return guardName(this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(t.skills)
         .values({ ...values, version: INITIAL_SKILL_VERSION })
         .returning();
       await tx.insert(t.skillVersions).values(snapshot(row!));
       return row!;
-    });
+    }));
   }
 
   /**
@@ -106,7 +131,7 @@ export class SkillsRepository {
    * newest one.
    */
   async update(workspaceId: string, id: string, patch: UpdateSkill): Promise<SkillRow | undefined> {
-    return this.db.transaction(async (tx) => {
+    return guardName(this.db.transaction(async (tx) => {
       const [existing] = await tx
         .select()
         .from(t.skills)
@@ -131,7 +156,7 @@ export class SkillsRepository {
         .returning();
       if (configChanged && row) await tx.insert(t.skillVersions).values(snapshot(row));
       return row;
-    });
+    }));
   }
 
   /**
@@ -140,7 +165,7 @@ export class SkillsRepository {
    * Undefined when the skill (in this workspace) or the version is missing.
    */
   async activateVersion(workspaceId: string, id: string, version: number): Promise<SkillRow | undefined> {
-    return this.db.transaction(async (tx) => {
+    return guardName(this.db.transaction(async (tx) => {
       const [snap] = await tx
         .select()
         .from(t.skillVersions)
@@ -168,7 +193,7 @@ export class SkillsRepository {
         .where(eq(t.skills.id, id))
         .returning();
       return row;
-    });
+    }));
   }
 
   /** Delete (versions + agent links cascade). False if not in the workspace. */

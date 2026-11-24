@@ -54,5 +54,9 @@ export const conventions = pgTable(
     skillId: uuid('skill_id').references(() => skills.id, { onDelete: 'set null' }),
     createdAt: now(),
   },
-  (t) => ({ repoStatusIdx: index('conventions_repo_status_idx').on(t.repoId, t.status) }),
+  (t) => ({
+    repoStatusIdx: index('conventions_repo_status_idx').on(t.repoId, t.status),
+    // FK lookup for `ON DELETE SET NULL` when a skill is deleted.
+    skillIdx: index('conventions_skill_idx').on(t.skillId),
+  }),
 );

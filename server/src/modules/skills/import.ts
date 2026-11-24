@@ -7,7 +7,7 @@
  * assets — is listed back as ignored and never decompressed, written to disk
  * or executed.
  */
-import { unzipSync } from 'fflate';
+import { Unzip, UnzipInflate, unzipSync } from 'fflate';
 import { parse as parseYaml } from 'yaml';
 import { SkillType, type SkillImportPreview } from '@devdigest/shared';
 import { ValidationError } from '../../platform/errors.js';
@@ -172,16 +172,60 @@ export function extractSkillFromArchive(bytes: Uint8Array): { text: string; igno
   if (!target) {
     throw invalid('No SKILL.md found in the archive (expected at the root or one folder down)');
   }
-  if (target.size > IMPORT_MAX_FILE_BYTES) throw invalid(`${target.name} is larger than ${IMPORT_MAX_FILE_BYTES} bytes`);
+  const tooLarge = () => invalid(`${target.name} is larger than ${IMPORT_MAX_FILE_BYTES} bytes`);
+  // The declared size is a header field the archive's author controls — a fast
+  // reject only. `inflateEntryCapped` enforces the real limit while inflating.
+  if (target.size > IMPORT_MAX_FILE_BYTES) throw tooLarge();
 
-  let out: Uint8Array | undefined;
+  let out: Uint8Array | null;
   try {
-    out = unzipSync(bytes, { filter: (f) => f.name === target.name })[target.name];
-  } catch {
+    out = inflateEntryCapped(bytes, target.name, IMPORT_MAX_FILE_BYTES);
+  } catch (e) {
+    if (e instanceof InflateLimitError) throw tooLarge();
     throw invalid(`Could not decompress ${target.name}`);
   }
-  if (!out || out.byteLength > IMPORT_MAX_FILE_BYTES) throw invalid(`Could not read ${target.name}`);
+  if (!out) throw invalid(`Could not read ${target.name}`);
   return { text: decodeUtf8(out), ignored: entries.map((e) => e.name).filter((n) => n !== target.name) };
+}
+
+class InflateLimitError extends Error {}
+
+/** Compressed bytes fed per step: one step can inflate to at most ~1032× this (deflate's max ratio). */
+const INFLATE_FEED_BYTES = 4 * 1024;
+
+/**
+ * Decompress one archive entry, aborting as soon as its output passes `cap`
+ * bytes — a zip bomb is stopped after at most `cap` + ~4 MB, whatever sizes
+ * its headers declare. Returns null when the entry is not found.
+ */
+export function inflateEntryCapped(bytes: Uint8Array, name: string, cap: number): Uint8Array | null {
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  let done = false;
+  const unzip = new Unzip((file) => {
+    if (file.name !== name || done) return;
+    file.ondata = (err, chunk, final) => {
+      if (err) throw err;
+      total += chunk.byteLength;
+      if (total > cap) throw new InflateLimitError();
+      chunks.push(chunk);
+      if (final) done = true;
+    };
+    file.start();
+  });
+  unzip.register(UnzipInflate);
+  for (let off = 0; off < bytes.byteLength && !done; off += INFLATE_FEED_BYTES) {
+    const end = Math.min(off + INFLATE_FEED_BYTES, bytes.byteLength);
+    unzip.push(bytes.subarray(off, end), end === bytes.byteLength);
+  }
+  if (!done) return null;
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.byteLength;
+  }
+  return out;
 }
 
 /** Parse imported bytes of a known kind into a preview draft. */

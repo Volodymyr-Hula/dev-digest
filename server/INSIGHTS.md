@@ -15,7 +15,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 ## Tool & Library Notes
 <!-- dependency quirks, version-specific behaviour, CLI gotchas -->
 - **Split a schema change that adds AND drops columns on one table into two `pnpm db:generate` runs (add first, drop second)** — drizzle-kit asks "is this a rename?" for every added column and, without a TTY (agent shell, CI), fails with `Error: Interactive prompts require a TTY terminal (process.stdin.isTTY or process.stdout.isTTY is false)`. Keep the old column in the schema for the first run, remove it for the second. Evidence: `src/db/migrations/0012_broken_night_thrasher.sql` + `0013_windy_lilandra.sql` (conventions `accepted` → `status`). (2026-11-24)
-- **List a zip's entries with fflate `unzipSync(bytes, { filter: (f) => { …; return false } })`, then decompress only the chosen entry with a second `filter`** — a filter returning false skips decompression, so an archive's scripts/assets are never inflated and `f.originalSize` can be checked first; a throw inside the filter aborts the scan (used for the entry-count cap). Evidence: `src/modules/skills/import.ts` `extractSkillFromArchive`; `test/skills-import.test.ts`. (2026-11-24)
+- **List a zip's entries with fflate `unzipSync(bytes, { filter: (f) => { …; return false } })`, then inflate only the chosen entry with the streaming `Unzip` fed in 4 KB slices (`inflateEntryCapped`)** — a filter returning false skips decompression, so an archive's scripts/assets are never inflated; a throw inside the filter aborts the scan (entry-count cap). Never trust `f.originalSize` as the limit: it is a header field the archive author sets, and `unzipSync` would inflate a lying entry in one allocation; the streaming path aborts once the output passes the cap. Evidence: `src/modules/skills/import.ts` `extractSkillFromArchive`, `inflateEntryCapped`; `test/skills-import.test.ts` "stops inflating a zip bomb". (2026-11-24)
 - **Treat `db.execute(sql…)` as an array of rows (`Array.from(rows, …)`), not `{ rows }`** — with the `postgres-js` driver (`db/client.ts`) Drizzle returns postgres' `RowList`, so the node-postgres `.rows` shape is undefined. Evidence: `src/modules/skills/repository.ts` `distinctTags`; covered by `test/skills.it.test.ts` "lists distinct tags". (2026-11-24)
 
 ## Recurring Errors & Fixes
@@ -24,6 +24,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-24 — pr-self-review fixes (fetcher port, connect-time SSRF check, capped inflate, name-clash 409) → corrected the fflate zip entry.
 - 2026-11-24 — conventions: one LLM call, GitHub evidence links, re-scan dedupe, error codes; API Contract Reviewer seed → empty-string `last_indexed_sha` placeholder.
 - 2026-11-24 — repo conventions (scan job, grounding, accept/reject, skill from conventions) → drizzle-kit add+drop split; open question on unhandled `job.done` rejections.
 - 2026-11-24 — skill import (URL/file/zip), active version → fflate list-without-inflate pattern.

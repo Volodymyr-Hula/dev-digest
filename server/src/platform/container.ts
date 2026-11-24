@@ -32,7 +32,8 @@ import { RepoIntelService } from '../modules/repo-intel/service.js';
 import { resolveFeatureModel } from '../modules/settings/feature-models.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
 import { type Tokenizer, TiktokenTokenizer } from '../adapters/tokenizer/index.js';
-import { type RemoteFetcher, HttpRemoteFetcher } from '../adapters/http/index.js';
+import { HttpRemoteFetcher } from '../adapters/http/index.js';
+import type { RemoteFetcher } from '../modules/skills/types.js';
 
 /**
  * DI container. One per app instance. Holds config, db, the JobRunner,

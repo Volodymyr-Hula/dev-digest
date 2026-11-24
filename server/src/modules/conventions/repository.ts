@@ -85,7 +85,13 @@ export class ConventionsRepository {
     await this.db.transaction(async (tx) => {
       await tx
         .delete(t.conventions)
-        .where(and(eq(t.conventions.repoId, repoId), eq(t.conventions.status, 'pending')));
+        .where(
+          and(
+            eq(t.conventions.workspaceId, workspaceId),
+            eq(t.conventions.repoId, repoId),
+            eq(t.conventions.status, 'pending'),
+          ),
+        );
       if (rows.length === 0) return;
       await tx.insert(t.conventions).values(
         rows.map((r) => ({ ...r, evidenceSha, workspaceId, repoId, status: 'pending' as const })),
@@ -94,7 +100,7 @@ export class ConventionsRepository {
   }
 
   /** Accepted + rejected conventions — the prompt's "already known" block and the re-scan dedupe. */
-  async knownRules(repoId: string): Promise<
+  async knownRules(workspaceId: string, repoId: string): Promise<
     { rule: string; status: ConventionStatusValue; evidencePath: string | null; evidenceSnippet: string | null }[]
   > {
     return this.db
@@ -106,7 +112,11 @@ export class ConventionsRepository {
       })
       .from(t.conventions)
       .where(
-        and(eq(t.conventions.repoId, repoId), inArray(t.conventions.status, ['accepted', 'rejected'])),
+        and(
+          eq(t.conventions.workspaceId, workspaceId),
+          eq(t.conventions.repoId, repoId),
+          inArray(t.conventions.status, ['accepted', 'rejected']),
+        ),
       )
       .orderBy(t.conventions.createdAt);
   }

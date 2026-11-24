@@ -116,7 +116,7 @@ export class ConventionsService {
     }
     if (files.size === 0) throw new ValidationError(SCAN_ERRORS.no_readable_files);
 
-    const known = await this.deps.repo.knownRules(repoId);
+    const known = await this.deps.repo.knownRules(workspaceId, repoId);
     const capped = new Map([...files].map(([p, c]) => [p, c.slice(0, FILE_CHAR_CAP)]));
     let extraction: ConventionExtraction;
     try {
