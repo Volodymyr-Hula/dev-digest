@@ -24,6 +24,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Recurring Errors & Fixes
 <!-- exact error text → cause → fix -->
+- **Record the `pr-self-review` verdict and run `git push` in separate Bash calls** — the guard hook checks the verdict before the command starts, so `commit && verdict PASS && git push` in one call is refused as a whole (`local changes differ from the last reviewed state`) and not even the commit runs. Evidence: `.claude/skills/pr-self-review/scripts/guard-pr.sh` (PreToolUse); blocked chained call on 2026-11-24. (2026-11-24)
 - **Put shell commands that only *mention* `git push` / `gh pr create|merge` (tests, echo, heredocs, grep) into a script file and run the file** — the `pr-self-review` guard hook greps the raw Bash command string and blocks it (exit 2) unless the change set has a current PASS verdict, even when the words sit inside `printf` or a heredoc. Evidence: `.claude/skills/pr-self-review/scripts/guard-pr.sh` regex; `PreToolUse:Bash hook error: … local changes were not reviewed` on a smoke-test command. (2026-11-23)
 - **Never wrap `git push` / `gh pr create` in a skill script to dodge the guard hook — run them as plain Bash commands** — the hook only sees the Bash command string, so a script would skip it, and the auto-mode classifier refuses to write such a script (`[Undermining Oversight]`). `create-pr` therefore issues push/PR directly and lets the hook gate them. Evidence: denied Write of `.claude/skills/create-pr/scripts/publish.sh`. (2026-11-23)
 - **Install `server/` and `client/` with pnpm 10 (what CI pins), never pnpm ≥11** — pnpm 12 fails with `ERR_PNPM_IGNORED_BUILDS … Ignored build scripts: esbuild@0.21.5`, leaves `node_modules` with only `.pnpm/` and no links, drops a placeholder `pnpm-workspace.yaml` (`allowBuilds: esbuild: set this to true or false`) and rewrites `pnpm-lock.yaml` without the `pnpm.overrides` from `package.json` (postcss/katex security pins). Fix: `npm i -g pnpm@10`, `git checkout -- pnpm-lock.yaml`, delete the generated `pnpm-workspace.yaml` and `node_modules`, reinstall. `pnpm approve-builds` from the repo root reports nothing — there is no root package. Evidence: `.github/workflows/e2e-web.yml:47`, `client.yml:37`, `server-unit.yml:47,79`, `server-integration.yml:43` (`pnpm/action-setup` `version: 10`); `git diff client/pnpm-lock.yaml` removed the `overrides:` block. (2026-11-20)
@@ -31,6 +32,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-24 — PR #5 (skills + conventions) self-review/fix loop → verdict and push as separate calls.
 - 2026-11-24 — skills phase 2 (validation, import, active version) → e2e run breaks a running dev client.
 - 2026-11-24 — skills feature e2e run → agent-browser under a different mise Node.
 - 2026-11-23 — create-pr skill → push/PR stay plain commands under the guard hook. pr-self-review verdict now stores its base (guard checks it against `gh pr create --base`).
