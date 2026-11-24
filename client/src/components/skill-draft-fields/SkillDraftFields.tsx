@@ -1,6 +1,6 @@
 /* SkillDraftFields — name / description / type / tags (+ body) of a new skill.
-   Shared by CreateSkillModal and ImportSkillModal; validation state comes from
-   the parent's `useFormValidation`. */
+   Shared by the Skills create/import modals and the Conventions "Accept as
+   Skill" modal; validation state comes from the parent's `useFormValidation`. */
 "use client";
 
 import React from "react";
@@ -18,12 +18,17 @@ export function SkillDraftFields({
   onChange,
   v,
   editBody = true,
+  lockType = false,
+  bodyRows = 8,
 }: {
   draft: SkillDraft;
   onChange: (patch: Partial<SkillDraft>) => void;
   v: ReturnType<typeof useFormValidation<SkillDraft>>;
   /** False when the body is shown elsewhere (import preview). */
   editBody?: boolean;
+  /** True when the type is fixed by the caller (skills built from conventions). */
+  lockType?: boolean;
+  bodyRows?: number;
 }) {
   const t = useTranslations("skills");
   const { data: allTags } = useSkillTags();
@@ -46,14 +51,16 @@ export function SkillDraftFields({
           {...v.controlProps("description")}
         />
       </FormField>
-      <FormField label={t("create.type")} htmlFor={v.controlProps("type").id}>
-        <SelectInput
-          id={v.controlProps("type").id}
-          value={draft.type}
-          onChange={(type) => onChange({ type: type as SkillType })}
-          options={SKILL_TYPES.map((x) => ({ value: x, label: t(`listItem.type.${x}`) }))}
-        />
-      </FormField>
+      {!lockType && (
+        <FormField label={t("create.type")} htmlFor={v.controlProps("type").id}>
+          <SelectInput
+            id={v.controlProps("type").id}
+            value={draft.type}
+            onChange={(type) => onChange({ type: type as SkillType })}
+            options={SKILL_TYPES.map((x) => ({ value: x, label: t(`listItem.type.${x}`) }))}
+          />
+        </FormField>
+      )}
       <FormField label={t("create.tags")} hint={t("config.tagsHint")} htmlFor={v.controlProps("tags").id}>
         <TagInput
           id={v.controlProps("tags").id}
@@ -67,7 +74,7 @@ export function SkillDraftFields({
           <Textarea
             value={draft.body}
             onChange={(body) => onChange({ body })}
-            rows={8}
+            rows={bodyRows}
             mono
             placeholder={t("create.bodyPlaceholder")}
             {...v.controlProps("body")}

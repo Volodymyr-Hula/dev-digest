@@ -14,7 +14,7 @@ import { useCreateSkill, useImportSkillPreview } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
 import { httpsUrl, required } from "@/lib/validation";
 import { useFormValidation } from "@/lib/useFormValidation";
-import { EMPTY_DRAFT, SKILL_DRAFT_RULES, SkillDraftFields, type SkillDraft } from "../SkillDraftFields";
+import { EMPTY_DRAFT, SKILL_DRAFT_RULES, SkillDraftFields, type SkillDraft } from "@/components/skill-draft-fields";
 import { ACCEPT, MAX_IMPORT_BYTES, MODAL_WIDTH } from "./constants";
 import { bytesToBase64, isImportableName, readFileBytes } from "./helpers";
 import { s } from "./styles";

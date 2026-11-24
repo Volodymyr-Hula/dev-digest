@@ -7,7 +7,7 @@ import { Button, Modal } from "@devdigest/ui";
 import { useCreateSkill } from "@/lib/hooks/skills";
 import { ApiError } from "@/lib/api";
 import { useFormValidation } from "@/lib/useFormValidation";
-import { EMPTY_DRAFT, SKILL_DRAFT_RULES, SkillDraftFields, type SkillDraft } from "../SkillDraftFields";
+import { EMPTY_DRAFT, SKILL_DRAFT_RULES, SkillDraftFields, type SkillDraft } from "@/components/skill-draft-fields";
 import { MODAL_WIDTH } from "./constants";
 import { s } from "./styles";
 
