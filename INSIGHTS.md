@@ -16,6 +16,8 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Tool & Library Notes
 <!-- dependency quirks, version-specific behaviour, CLI gotchas -->
+- **Restart the developer's `pnpm dev` (client) after running `./scripts/e2e.sh`** — e2e starts a second `next dev` in the same `client/` folder with `NEXT_PUBLIC_API_BASE=http://localhost:3101` (`scripts/e2e.sh:42,148`), and both share `client/.next`, so afterwards the dev web app on :13000 calls the e2e API (`Connecting to 'http://localhost:3101/repos' violates the following Content Security Policy directive`) and returned 404 for an existing `/skills/[id]` page. Evidence: browser console on :13000 right after an e2e run. (2026-11-24)
+- **If `agent-browser` fails with `mise ERROR agent-browser is not provided by the active node@…`, run e2e with that node's bin on PATH** — it was installed globally under another mise Node, so `scripts/e2e.sh` only warns `agent-browser not found` and every flow fails. Fix: `PATH="$HOME/.local/share/mise/installs/node/<version>/bin:$PATH" ./scripts/e2e.sh` (the version is named in the error), or `npm i -g agent-browser` for the active Node. Evidence: `scripts/e2e.sh:51-52`. (2026-11-24)
 - **Restart the Claude Code session before using a newly added `.claude/agents/<name>.md` as `subagent_type`** — agent definitions load at session start; mid-session the Agent tool fails with `Agent type 'client-reviewer' not found. Available agents: claude, …`, while a new skill under `.claude/skills/` is picked up immediately. Evidence: Agent tool error after creating `.claude/agents/client-reviewer.md` (since removed). (2026-11-23)
 - **Preload `user-invocable: false` skills into a subagent via `skills:` in `.claude/agents/*.md` — it works** — `client-reviewer` started with `client-layout` (`user-invocable: false`) already in context and quoted `## 3. Component folder anatomy` without a Read. Only `disable-model-invocation: true` blocks preload. Evidence: smoke run of a `client-reviewer` agent with `skills: [client-layout]` on 2026-11-23 (agent file since removed; `pr-self-review` uses `general-purpose` + Read instead). (2026-11-23)
 - **Save Playwright-MCP screenshots under `.playwright-mcp/` in the repo and delete the folder after** — the plugin refuses paths outside the repo root (`File access denied: … is outside allowed roots`), so the session scratchpad can't be used, and `.playwright-mcp/` is not in `.gitignore`. Evidence: `.gitignore:21-22` ignores `playwright-report/` and `test-results/` but not `.playwright-mcp/`; `browser_take_screenshot` error; `git check-ignore .playwright-mcp` → not ignored. (2026-11-20)
@@ -29,6 +31,8 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-24 — skills phase 2 (validation, import, active version) → e2e run breaks a running dev client.
+- 2026-11-24 — skills feature e2e run → agent-browser under a different mise Node.
 - 2026-11-23 — create-pr skill → push/PR stay plain commands under the guard hook. pr-self-review verdict now stores its base (guard checks it against `gh pr create --base`).
 - 2026-11-23 — pr-self-review rebuilt (general-purpose reviewers + guard hook on push/PR) → guard blocks commands that merely mention a push.
 - 2026-11-23 — pr-self-review skill + client/server reviewer agents → agents load only at session start; `skills:` preload works for `user-invocable: false`.

@@ -44,4 +44,15 @@ describe("safeUrlTransform", () => {
   ])("%s → %s", (input, expected) => {
     expect(safeUrlTransform(input)).toBe(expected);
   });
+
+  it("renders headings, lists and fenced code as real elements", () => {
+    const { container } = render(
+      <Markdown>{"## Rules\n\n- one\n- two\n\n1. first\n\n```ts\nconst x = 1;\n```\n\nuse `y`"}</Markdown>,
+    );
+    expect(screen.getByRole("heading", { level: 2, name: "Rules" })).toBeTruthy();
+    expect(container.querySelectorAll("ul > li")).toHaveLength(2);
+    expect(container.querySelectorAll("ol > li")).toHaveLength(1);
+    expect(container.querySelector("pre > code")?.textContent).toContain("const x = 1;");
+    expect(container.querySelector("p > code")?.textContent).toBe("y");
+  });
 });

@@ -7,19 +7,16 @@
     "searchPlaceholder": "Search skills…",
     "loadError": "Could not load skills.",
     "menu": {
+      "fromScratch": "Create from scratch",
       "fromFile": "Import from file",
-      "fromUrl": "Import from URL",
-      "community": "Search community skills…"
+      "fromUrl": "Import from URL"
     },
     "empty": {
       "title": "No skills yet",
-      "body": "Import a skill from a file, a URL, or the community catalog.",
-      "cta": "Import from file"
+      "body": "A skill is a markdown rule you can attach to any agent.",
+      "cta": "Create a skill"
     },
-    "selectPrompt": {
-      "title": "Select a skill",
-      "body": "Pick a skill on the left to preview its body."
-    }
+    "subtitle": "Reusable review rules. Every enabled skill linked to an agent is sent in full with its review."
   },
   "detail": {
     "crumbSkill": "Skill",
@@ -29,47 +26,6 @@
       "title": "Skill not found",
       "body": "It may have been deleted."
     }
-  },
-  "drawer": {
-    "title": "Add a skill",
-    "subtitle": "Import from a file, a URL, or search vetted community skills",
-    "tabs": {
-      "file": "From file",
-      "url": "From URL",
-      "community": "Community"
-    },
-    "importFailed": "Import failed"
-  },
-  "file": {
-    "nameLabel": "Skill name",
-    "nameHint": "Optional — derived from the first heading if blank.",
-    "namePlaceholder": "pr-quality-rubric",
-    "bodyLabel": "Skill body (Markdown)",
-    "bodyHint": "Pasted content is wrapped as untrusted data — never executed as instructions.",
-    "bodyPlaceholder": "# Rule\nDescribe the rule…",
-    "importing": "Importing…",
-    "import": "Import skill",
-    "success": "Imported \"{name}\" (stored as untrusted data)."
-  },
-  "url": {
-    "label": "Skill URL",
-    "hint": "Fetched server-side, stored as untrusted, and left disabled until vetted.",
-    "placeholder": "https://example.com/skills/security.md",
-    "fetching": "Fetching…",
-    "import": "Import from URL",
-    "success": "Imported \"{name}\". Disabled until you vet + enable it."
-  },
-  "community": {
-    "searchPlaceholder": "Search community skills (e.g. security)…",
-    "allLanguages": "All languages",
-    "loadError": "Could not load community skills",
-    "retry": "Retry",
-    "noMatch": {
-      "title": "No matching skills",
-      "body": "Try a different search term."
-    },
-    "importing": "Importing…",
-    "import": "Import"
   },
   "listItem": {
     "needsVetting": "needs vetting",
@@ -97,5 +53,98 @@
     "bodyLabel": "Skill body (Markdown)",
     "bodyHint": "Saving a changed body creates a new immutable version.",
     "version": "v{version}"
+  },
+  "card": {
+    "noDescription": "No description",
+    "agentCount": "{count, plural, =0 {No agents} one {# agent} other {# agents}}",
+    "trusted": "Trusted",
+    "untrusted": "Untrusted — sent as data, not instructions",
+    "delete": "Delete skill"
+  },
+  "tabs": {
+    "config": "Config",
+    "preview": "Preview",
+    "versions": "Versions"
+  },
+  "create": {
+    "title": "Create a skill",
+    "subtitle": "A markdown rule agents receive in full with every review.",
+    "name": "Name",
+    "namePlaceholder": "pr-quality-rubric",
+    "nameHint": "kebab-case: lowercase letters, digits and dashes.",
+    "description": "Description",
+    "type": "Type",
+    "body": "Skill body",
+    "bodyPlaceholder": "# Rule\nDescribe what the reviewer must check…",
+    "cancel": "Cancel",
+    "create": "Create skill",
+    "creating": "Creating…",
+    "tags": "Tags"
+  },
+  "config": {
+    "title": "Configuration",
+    "enabled": "Enabled",
+    "name": "Name",
+    "description": "Description",
+    "type": "Type",
+    "tags": "Tags",
+    "tagsHint": "Press Enter or comma to add. Type 3+ letters to pick an existing tag.",
+    "trusted": "Trusted",
+    "trustedHint": "Trusted skills are sent to the model as rules. Untrusted ones are wrapped as data the model must not follow as instructions.",
+    "body": "Skill body",
+    "unsaved": "unsaved",
+    "tokens": "~{count} tokens",
+    "save": "Save skill",
+    "saving": "Saving…",
+    "saved": "Saved (v{version})",
+    "savedToast": "Skill saved (v{version})",
+    "delete": "Delete",
+    "deleteConfirm": "Delete skill \"{name}\"? This cannot be undone.",
+    "deleteConfirmLinked": "Delete skill \"{name}\"? It is used by {count, plural, one {# agent} other {# agents}} and will be removed from them. This cannot be undone.",
+    "deletedToast": "Skill deleted"
+  },
+  "previewTab": {
+    "title": "Preview",
+    "subtitle": "Rendered as the reviewing agent receives it.",
+    "disabledNote": "This skill is disabled — agents do not receive it.",
+    "untrustedNote": "Untrusted — agents receive it wrapped as data, not as instructions."
+  },
+  "versions": {
+    "title": "Versions",
+    "subtitle": "Every change except enabling/disabling saves a new immutable version. The active version is what linked agents receive.",
+    "active": "active",
+    "latest": "latest",
+    "loadError": "Could not load versions.",
+    "trusted": "trusted",
+    "untrusted": "untrusted",
+    "makeActive": "Make active",
+    "activating": "Activating…",
+    "activateConfirm": "Make v{version} the active version? Linked agents will receive its content from the next review. No new version is created.",
+    "activatedToast": "v{version} is now active"
+  },
+  "import": {
+    "titleFile": "Import a skill from a file",
+    "titleUrl": "Import a skill from a URL",
+    "subtitle": "Nothing is saved until you confirm. Only the markdown is used: scripts and other files in an archive are ignored, never run.",
+    "fileLabel": "Skill file",
+    "fileHint": "A .md file with YAML frontmatter (name, description; optional type, tags), or a .zip / .skill archive containing SKILL.md. Max 2 MB.",
+    "chooseFile": "Choose file…",
+    "noFile": "No file chosen",
+    "fileTooLarge": "The file is larger than 2 MB.",
+    "fileType": "Use a .md, .markdown, .zip or .skill file.",
+    "urlLabel": "Skill URL",
+    "urlHint": "https only. GitHub file links are fetched from raw.githubusercontent.com.",
+    "urlPlaceholder": "https://github.com/owner/repo/blob/main/skills/review/SKILL.md",
+    "fetchPreview": "Preview",
+    "fetching": "Reading…",
+    "back": "Back",
+    "cancel": "Cancel",
+    "confirm": "Import skill",
+    "importing": "Importing…",
+    "untrustedNote": "Imported skills are untrusted: agents receive the body wrapped as data, not as instructions. It is enabled right away; mark it trusted in Config once you have vetted it.",
+    "warnings": "Warnings",
+    "ignoredFiles": "{count, plural, one {# file ignored} other {# files ignored}} (not read or executed)",
+    "bodyPreview": "Body preview",
+    "importedToast": "Imported \"{name}\" as untrusted"
   }
 }

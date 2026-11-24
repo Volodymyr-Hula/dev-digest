@@ -1,7 +1,7 @@
 {
   "card": {
     "noDescription": "No description",
-    "skillCount": "{count} skills"
+    "skillCount": "{count, plural, one {# skill} other {# skills}}"
   },
   "list": {
     "breadcrumbLab": "Skills Lab",
@@ -22,7 +22,6 @@
     "cancel": "Cancel",
     "create": "Create agent",
     "creating": "Creating…",
-    "defaultName": "New Agent",
     "defaultSystemPrompt": "You are a code reviewer. Examine the diff and return at most 5 high-value findings, each citing an exact file:line.",
     "fields": {
       "name": "Name",
@@ -62,7 +61,7 @@
     "modelEmptyHint": "No models loaded — set the {provider} API key in Settings → API Keys.",
     "modelSearch": "Search models…",
     "systemPrompt": "System prompt",
-    "systemPromptHint": "Loaded as the static system message. Enabled skills are appended below it.",
+    "systemPromptHint": "Loaded as the static system message. Enabled linked skills are sent with each review under \"Skills / rules\".",
     "outputSchema": "Output schema",
     "outputSchemaOption": "Standard findings JSON",
     "strategy": "Review strategy",
@@ -91,7 +90,11 @@
     "title": "Skills",
     "enabledCount": "{linked} of {total} enabled",
     "filterPlaceholder": "Filter skills…",
-    "orderHint": "Order matters — earlier skills appear earlier in the assembled prompt. Toggle to attach."
+    "orderHint": "Every checked skill is sent in full with each review, ordered by name.",
+    "loadError": "Could not load skills.",
+    "empty": "No skills yet.",
+    "createLink": "Create a skill",
+    "disabled": "disabled globally"
   },
   "mount": {
     "body": "Mount point for {owner}. The Agent Editor shell + tab routing are wired by A2 — {owner} renders this tab."

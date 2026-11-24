@@ -7,7 +7,7 @@
 | `src/app/**/page.tsx` | App Router pages — thin; feature logic lives in colocated `_components/<Name>/` |
 | `src/components/` | cross-page components (app-shell, diff-viewer, page-shell, mermaid-diagram, …) |
 | `src/lib/api.ts` | `apiFetch` + `ApiError` — the only HTTP client |
-| `src/lib/hooks/` | TanStack Query hooks per domain (`core`, `agents`, `reviews`, `repo-intel`, `trace`) |
+| `src/lib/hooks/` | TanStack Query hooks per domain (`core`, `agents`, `skills`, `reviews`, `repo-intel`, `trace`) |
 | `src/lib/` | providers, repo context, theme, toast, shared types |
 | `src/vendor/ui/` | `@devdigest/ui` design system |
 | `src/vendor/shared/` | copy of `@devdigest/shared` contracts |

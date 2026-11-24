@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Modal, FormField, TextInput, SelectInput, Textarea } from "@devdigest/ui";
 import type { Provider } from "@devdigest/shared";
-import { useCreateAgent } from "../../../../../../lib/hooks/agents";
+import { useCreateAgent } from "@/lib/hooks/agents";
+import { required } from "@/lib/validation";
+import { useFormValidation } from "@/lib/useFormValidation";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER, MODAL_WIDTH, PROVIDER_OPTIONS } from "./constants";
 import { s } from "./styles";
 
@@ -19,10 +21,16 @@ export function CreateAgentModal({ onClose }: { onClose: () => void }) {
   const [provider, setProvider] = React.useState<Provider>(DEFAULT_PROVIDER);
   const [model, setModel] = React.useState(DEFAULT_MODEL);
   const [systemPrompt, setSystemPrompt] = React.useState(t("create.defaultSystemPrompt"));
+  const v = useFormValidation(
+    { name, model, systemPrompt },
+    { name: [required], model: [required], systemPrompt: [required] },
+    "create-agent",
+  );
 
   const submit = async () => {
+    if (!v.validateAll()) return;
     const agent = await create.mutateAsync({
-      name: name.trim() || t("create.defaultName"),
+      name: name.trim(),
       description,
       provider,
       model,
@@ -50,8 +58,13 @@ export function CreateAgentModal({ onClose }: { onClose: () => void }) {
       }
     >
       <div style={s.body}>
-        <FormField label={t("create.fields.name")} required>
-          <TextInput value={name} onChange={setName} placeholder={t("create.fields.namePlaceholder")} />
+        <FormField label={t("create.fields.name")} required {...v.fieldProps("name")}>
+          <TextInput
+            value={name}
+            onChange={setName}
+            placeholder={t("create.fields.namePlaceholder")}
+            {...v.controlProps("name")}
+          />
         </FormField>
         <FormField label={t("create.fields.description")}>
           <TextInput
@@ -67,11 +80,17 @@ export function CreateAgentModal({ onClose }: { onClose: () => void }) {
             options={[...PROVIDER_OPTIONS]}
           />
         </FormField>
-        <FormField label={t("create.fields.model")}>
-          <TextInput value={model} onChange={setModel} mono />
+        <FormField label={t("create.fields.model")} required {...v.fieldProps("model")}>
+          <TextInput value={model} onChange={setModel} mono {...v.controlProps("model")} />
         </FormField>
-        <FormField label={t("create.fields.systemPrompt")}>
-          <Textarea value={systemPrompt} onChange={setSystemPrompt} rows={6} mono />
+        <FormField label={t("create.fields.systemPrompt")} required {...v.fieldProps("systemPrompt")}>
+          <Textarea
+            value={systemPrompt}
+            onChange={setSystemPrompt}
+            rows={6}
+            mono
+            {...v.controlProps("systemPrompt")}
+          />
         </FormField>
       </div>
     </Modal>

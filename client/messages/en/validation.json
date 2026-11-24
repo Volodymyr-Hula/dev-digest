@@ -1,0 +1,9 @@
+{
+  "required": "This field is required.",
+  "tooLong": "Must be at most {max} characters.",
+  "skillNameFormat": "Use lowercase letters, digits and single hyphens, e.g. security-audit.",
+  "invalidUrl": "Enter a valid URL.",
+  "httpsUrl": "The URL must start with https://.",
+  "githubRepoUrl": "Expected https://github.com/owner/repo.",
+  "nameTaken": "A skill with this name already exists."
+}
