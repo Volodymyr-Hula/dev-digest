@@ -17,6 +17,11 @@ Hook → endpoint map (`lib/hooks/*`, all via `api.*` → `apiFetch`):
 | `useTestConnection` core:38 | `POST /settings/test-connection {provider, key?}` |
 | `useAgents`, `useAgent`, `useCreateAgent`, `useUpdateAgent`, `useDeleteAgent` agents:8-72 | `GET /agents`, `GET /agents/:id`, `POST /agents`, `PUT /agents/:id`, `DELETE /agents/:id` |
 | `useProviderModels` agents:84 | `GET /providers/:provider/models` |
+| `useSkills`, `useSkill`, `useCreateSkill`, `useUpdateSkill`, `useDeleteSkill` (skills) | `GET /skills`, `GET /skills/:id`, `POST /skills`, `PUT /skills/:id`, `DELETE /skills/:id` |
+| `useSkillTags`, `useSkillVersions` (skills) | `GET /skills/tags`, `GET /skills/:id/versions` |
+| `useActivateSkillVersion` (skills) | `POST /skills/:id/versions/:version/activate` |
+| `useImportSkillPreview` (skills) | `POST /skills/import/preview {kind:'url',url} \| {kind:'file',filename,content_base64}` |
+| `useAgentSkills` / `useSetAgentSkills` (skills) | `GET /agents/:id/skills` / `POST /agents/:id/skills {skill_ids}` |
 | `usePrReviews` reviews:51 | `GET /pulls/:prId/reviews` |
 | `usePrRuns` / `usePrActiveRuns` reviews:40,28 | `GET /pulls/:prId/runs` / `…/runs/active` |
 | `useRunReview` reviews:124 | `POST /pulls/:prId/review {agentId}` or `{all:true}` |
@@ -34,8 +39,11 @@ Hook → endpoint map (`lib/hooks/*`, all via `api.*` → `apiFetch`):
 | `/onboarding` | `app/onboarding/page.tsx` → `AddRepoView` | – | client |
 | `/repos/:repoId/pulls` | `pulls/page.tsx` | `repoId`; `?status` | client |
 | `/repos/:repoId/pulls/:number` | `pulls/[number]/page.tsx` | `repoId`, `number`; `?tab`, `?trace` | client |
+| `/repos/:repoId/conventions` | `app/repos/[repoId]/conventions/page.tsx` → `ConventionsView` | `repoId` | client |
 | `/agents` | `app/agents/page.tsx` → `AgentsListView` | – | server page, client view |
 | `/agents/:id` | `app/agents/[id]/page.tsx` | `id`; `?tab` | client |
+| `/skills` | `app/skills/page.tsx` → `SkillsListView` | – | server page, client view |
+| `/skills/:id` | `app/skills/[id]/page.tsx` | `id`; `?tab` | client |
 | `/settings/:section` | `app/settings/[section]/page.tsx` → `SettingsView` | `section` | server page, client view |
 
 No other `page.tsx` exists (no `/showcase`, no `/settings` index; `/settings` alone is a 404, nav links always target `/settings/api-keys`, `vendor/ui/nav.ts:35`).
@@ -116,7 +124,7 @@ Tab `findings` (`FindingsTab.tsx`):
 
 Tab `diff` (`DiffTab`): file-by-file `DiffViewer` from `pr.files`; comments are hidden until toggled, the toggle only appears when `comments.length > 0`; posting a comment reveals them again (`DiffTab.tsx:22,28-40`). Inline commenting is offered only when `pr.status === "open"` and `prId` is set (page:169; DiffTab:28). Failure → `notify.error` and the error is re-thrown to the composer (DiffTab:36-39).
 
-Trace drawer: rendered when `prId && ?trace` (page:174-182); `findings`/`agentName` come from the matching review by `run_id`; close removes `?trace`. It shows the persisted trace, not a live stream ([why](../docs/ui-architecture.md#live-run-updates-sse--polling)).
+Trace drawer: rendered when `prId && ?trace` (page:174-182); its Configuration section lists `skills_used` as `name vN` links to `/skills/:id` (the skill texts sit in the "Skills (dynamic)" prompt block); `findings`/`agentName` come from the matching review by `run_id`; close removes `?trace`. It shows the persisted trace, not a live stream ([why](../docs/ui-architecture.md#live-run-updates-sse--polling)).
 
 ## `/agents` — agent list
 
@@ -132,11 +140,48 @@ Trace drawer: rendered when `prId && ?trace` (page:174-182); `findings`/`agentNa
 
 `app/agents/[id]/page.tsx`. Hooks: `useAgents` (left list), `useAgent(id)`, `useUpdateAgent` (23-25).
 
-- `?tab` is validated against `VALID_TABS = ["config"]`, fallback `config` (15, 27). `setTab` writes `?tab=` with `router.replace` (28-32). The starter ships one tab (`AgentEditor/constants.ts:11-12`).
+- `?tab` is validated against `VALID_TABS = ["config", "skills"]`, fallback `config`. `setTab` writes `?tab=` with `router.replace`. `AgentEditor` renders `SkillsTab` for `skills`, otherwise `ConfigTab`.
 - Error state evaluated first: `isError || (!isLoading && !agent)` → full-screen `ErrorState` "Couldn’t load this agent", retry → `refetch` (40-51). Otherwise a two-pane layout (53+): left = all agents as `AgentCard`s (click → `/agents/:id?tab=<tab>`, toggle → `PUT {enabled}`, 83-91); right = skeleton while loading (96-100) else header (name, `provider/model` badge, `disabled` badge, "Run on a PR…" → `/`, 103-115) + `AgentEditor`.
 - The left "Add → Create from scratch" navigates to `/agents` (78); it does not open the create modal.
 - `ConfigTab` (`AgentEditor/_components/ConfigTab/ConfigTab.tsx`): local form state, reset only when `agent.id` changes (29-39). Save → `PUT /agents/:id` with `name, description, provider, model, system_prompt, strategy, ci_fail_on, repo_intel, enabled` (55-70); success toast with `version` (74) and an inline "Saved (vN)" note (140-142); the cache gets the response via `setQueryData(["agent", id])` + `["agents"]` invalidation (agents:66-67). Model list = `GET /providers/<provider>/models`; the current model is always injected into the options, and an empty loaded list switches the hint to the "key missing" text (41-49, 100-103). `output_schema` is a read-only single-option select (133-135).
 - Breadcrumb root "Skills Lab" is a literal (35).
+- `SkillsTab` (`AgentEditor/_components/SkillsTab/SkillsTab.tsx`): every workspace skill as a checkbox row, sorted by name (= prompt order), filter on name/description/tags, header `{linked} of {total} enabled`. Toggling sends the whole linked id set → `POST /agents/:id/skills {skill_ids}`. Globally disabled skills stay listed (dimmed, "disabled globally"). No reordering — the server orders by skill name.
+- `AgentCard` always shows `ag.skill_count` (from `GET /agents`).
+
+## Forms — inline validation
+
+Every form validates through `useFormValidation(values, rules, idPrefix)` (`src/lib/useFormValidation.ts`) with rules from `src/lib/validation.ts` (`required`, `maxLen`, `skillName`, `httpsUrl`, `githubRepoUrl`; messages in `messages/en/validation.json`). A field's error appears after its first blur and then follows every change; submit buttons stay enabled, and submitting touches all fields and focuses the first invalid one. `FormField error/htmlFor` renders the message (`role="alert"`), `TextInput`/`Textarea`/`SelectInput` `invalid` draws the red border + `aria-invalid`. Server conflicts go through `setServerError(field, msg)` and clear when the value changes. Used by: `CreateSkillModal`, `ImportSkillModal`, skill `ConfigTab`, `CreateAgentModal` (name, model, system prompt), agent `ConfigTab` (name, system prompt), `AddRepoView` (GitHub URL). `SettingsApiKeys` has no client rule (an empty key tests the stored one).
+
+## `/skills` — skill list
+
+`app/skills/page.tsx` → `SkillsListView` (`skills/_components/SkillsListView/SkillsListView.tsx`). Hooks: `useSkills`, `useUpdateSkill`.
+
+- Search filters client-side on `name + description + tags` (`helpers.ts`).
+- "Add Skill" is a menu: Create from scratch / Import from file / Import from URL. Community import is not built.
+- `CreateSkillModal` (fields in the shared `components/skill-draft-fields`: name, description, type, tags with suggestions, body): `POST /skills {name, description, type, tags, body}`. Inline validation (`SKILL_DRAFT_RULES`: name required + kebab-case, description ≤ 500, body required); Create stays enabled and validates on click; a 409 shows "already exists" on the name field. On success → `/skills/<id>?tab=config`.
+- `ImportSkillModal` (`mode: file | url`): step 1 picks a `.md/.markdown/.zip/.skill` file (≤ 2 MB, read as base64) or an https URL → `POST /skills/import/preview`; nothing is saved. Step 2 shows the untrusted note, server warnings, the editable draft (`SkillDraftFields` without body), the ignored archive files and the body rendered as markdown; `name_taken` pre-marks the name field. "Import skill" → `POST /skills {…draft, source}` without `trusted` (server default: untrusted) → `/skills/<id>?tab=preview`. Parse errors (422) show inline on the URL/file field.
+- `SkillCard` (`components/skill-card/`, also used on `/skills/:id`): type badge, `#tag`s, trusted check (or "untrusted source" badge), enabled toggle (`PUT {enabled}`), `{n} agents`.
+- States: 3 skeletons; `ErrorState` with retry; `EmptyState` only when the workspace has no skills (a search with no hits shows an empty grid).
+
+## `/repos/:repoId/conventions` — conventions
+
+`app/repos/[repoId]/conventions/page.tsx` → `ConventionsView`. Hooks: `useConventions`, `useStartConventionsScan`, `useUpdateConvention`, `useAttachConventions` (`lib/hooks/conventions.ts`), `useCreateSkill`. Server behaviour: [../../server/specs/conventions.md](../../server/specs/conventions.md).
+
+- Header: `Conventions in <full_name>`, stats line `{accepted} accepted · {rejected} rejected · {inSkills} in skills`, Re-scan (only when there are items), "Create skill ({n})" — disabled while no accepted convention is outside a skill.
+- Run extraction / Re-scan → `POST /repos/:id/conventions/scan` (202). The list refetches every 2 s while `scan.status` is `queued|running` (`CONVENTIONS_POLL_MS`), so leaving and returning keeps the scanning state. A 409 or other error → toast.
+- A failed last scan (`scanError`): its message comes from `page.failed.codes.<error_code>` (`not_indexed | no_readable_files | llm_failed | timeout | interrupted | unknown`), with the raw server text as a "Details:" line (none for `interrupted`). With conventions on the page it is an alert above the list; without any it is an `ErrorState` whose Retry starts a new scan.
+- Sections in order To review / Accepted / In skills / Rejected (`groupConventions`); empty sections are hidden.
+- `ConventionCard`: rule, evidence `path:start-end` — a new-tab link to `evidence_url` (GitHub permalink at the scanned commit), plain text when it is null — snippet (`<pre>`), confidence. Pending: Accept / Reject / Edit; accepted: Reject / Edit; rejected: Accept. Edit is inline (Save disabled on empty text, unchanged text is not sent) → `PATCH /conventions/:id`. Cards in a skill are read-only with an "In skill" badge.
+- `ConventionSkillModal`: a checklist of the accepted conventions outside a skill (all checked at first) above `SkillDraftFields` with `lockType` (type stays `convention`) and a 16-row body. Prefill: name `<repo>-conventions`, description, body = every selected rule + evidence path + full snippet in a fence longer than any backtick run inside it. The body follows the selection until it is edited by hand; then "Rebuild body from selection" re-applies it. Save is disabled with nothing selected. Save → `POST /skills {…, type: convention, source: extracted, evidence_files}` (selected only) then `POST /repos/:id/conventions/attach` with the selected ids — the unselected ones stay in Accepted for another skill. A 409 marks the name field; a failed attach shows an alert and the button becomes Retry, which re-sends only the attach.
+- States (`emptyKind`): 3 skeletons; load `ErrorState` with retry; no conventions and `scan === null` → `EmptyState` "Run extraction"; last scan `done` with nothing → "No new conventions found" + Re-scan; last scan `failed` → the error state above; `RepoNotFound` for an unknown `:repoId`. All strings come from `messages/en/conventions.json`.
+
+## `/skills/:id` — skill editor
+
+`app/skills/[id]/page.tsx`, same two-pane layout as `/agents/:id`. `?tab` ∈ `config | preview | versions` (`SkillEditor/constants.ts`), fallback `config`. Header: name, type badge, `v{n}`, trusted badge, `disabled` badge.
+
+- `ConfigTab`: name (required, kebab-case), description, type, tags (`components/tag-input`: Enter/comma adds, trim+lowercase, dedupe, Backspace removes last; from 3 typed characters a dropdown lists matching tags from `GET /skills/tags`, ↑/↓ + Enter or click), trusted checkbox, enabled toggle, `BodyEditor` (line-number gutter, `<name>.md`, `unsaved` when the body differs, `~N tokens` = `ceil(chars/4)`). Save → `PUT /skills/:id` with all fields; disabled only while pending or when nothing changed; invalid fields show inline; toast `v{n}`; a 409 marks the name field. The form resets when the skill or its active version changes. Delete → `window.confirm` (mentions the linked-agent count) → `DELETE /skills/:id` → `/skills`.
+- `PreviewTab`: body through the `Markdown` primitive; notes when the skill is disabled or untrusted.
+- `VersionsTab`: `GET /skills/:id/versions` newest-first, badges `active` (= `skill.version`) and `latest`; opens on the active version. Selecting one shows its snapshot (body as markdown). "Make active" (confirm) → `POST /skills/:id/versions/:v/activate`: the skill row takes that snapshot's content, no new version is recorded, linked agents get it from the next review. The header `v{n}` is the active version.
 
 ## `/settings/:section` — settings
 

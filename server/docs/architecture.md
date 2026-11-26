@@ -51,7 +51,7 @@ Port interfaces live in `vendor/shared/adapters.ts` (`LLMProvider` `:82`, `Embed
 | `AuthProvider` | `auth/local.ts` (`LocalNoAuthProvider`, seeded user + `default` workspace) | `MockAuthProvider` `:312` |
 | `SecretsProvider` | `secrets/local.ts` (`~/.devdigest/secrets.json`, env fallback) | `MockSecretsProvider` `:325` |
 
-`DepGraph`, `Tokenizer` and `RepoIntel` are server-local ports (not in `@devdigest/shared`); `ContainerOverrides` exposes them too (`container.ts:49-53`). `getContext()` (`modules/_shared/context.ts:14`) resolves `{ workspaceId, userId }` through `AuthProvider`; every route calls it so workspace scoping is never skipped (see the scoping gaps in [../specs/review-flow.md](../specs/review-flow.md#workspace-scoping)).
+`DepGraph`, `Tokenizer`, `RemoteFetcher` (port in `modules/skills/types.ts`; adapter `adapters/http/index.ts`: https fetch for skill import whose socket `lookup` refuses private/loopback/link-local addresses, so the checked address is the connected one; mock `MockRemoteFetcher`) and `RepoIntel` are server-local ports (not in `@devdigest/shared`); `ContainerOverrides` exposes them too (`container.ts:49-53`). `getContext()` (`modules/_shared/context.ts:14`) resolves `{ workspaceId, userId }` through `AuthProvider`; every route calls it so workspace scoping is never skipped (see the scoping gaps in [../specs/review-flow.md](../specs/review-flow.md#workspace-scoping)).
 
 Contract ownership across packages: root [CLAUDE.md](../../CLAUDE.md) Gotchas.
 
@@ -96,10 +96,10 @@ sequenceDiagram
   end
 ```
 
-- Defaults: concurrency 3, timeout 120 s, 2 retries (`jobs.ts:40-42`). Backoff is exponential from 250 ms capped at 8 s with jitter (`resilience.ts:46`).
+- Defaults: concurrency 3, timeout 120 s, 2 retries (`jobs.ts:40-42`); `enqueue(…, { retries, timeoutMs })` overrides them per job (the conventions scan uses `retries: 0` so a failed LLM call is not paid for three times). Backoff is exponential from 250 ms capped at 8 s with jitter (`resilience.ts:46`).
 - `enqueue` rejects with a plain `Error` (not `AppError`) when no handler is registered for `kind` (`jobs.ts:51`); callers that treat the follow-up as best-effort wrap it in `try/catch` (`repos/service.ts:69-79`, `repo-intel/routes.ts:52-60`).
 - Retry only fires for HTTP 429/≥500 or `ECONNRESET`/`ETIMEDOUT`/`ENOTFOUND` (`resilience.ts:35`); a `TimeoutError` is not retried. `withTimeout` rejects but does not cancel the handler.
-- The `jobs` table is a log/mirror, not a durable queue: nothing reads rows back, so queued/running rows left by a crash are never re-run or reaped (the only `t.jobs` references are in `jobs.ts`). Payloads are persisted, so handlers must not trust them — `runCloneJob` rebuilds the clone URL from `owner/name` (`repos/service.ts:49-56`).
+- The `jobs` table is a log/mirror, not a durable queue: queued/running rows left by a crash are never re-run or reaped. The only reader is the conventions module, which shows the latest `conventions.scan` row as the scan state and treats a left-behind row as `interrupted` by age (`modules/conventions/helpers.ts` `isStaleJob`). Payloads are persisted, so handlers must not trust them — `runCloneJob` rebuilds the clone URL from `owner/name` (`repos/service.ts:49-56`).
 - Jobs chain by enqueueing, not calling: clone → `INDEX_JOB_KIND` (`repos/service.ts:69`); refresh enqueues clone + `REFRESH_JOB_KIND` (`:115-138`). Indexing internals: [../src/modules/repo-intel/README.md](../src/modules/repo-intel/README.md).
 
 ## Review runs are not jobs

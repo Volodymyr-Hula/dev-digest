@@ -33,6 +33,8 @@ import type {
   SecretKey,
 } from '@devdigest/shared';
 import { parseUnifiedDiff } from './git/diff-parser.js';
+import type { FetchedFile, RemoteFetcher } from '../modules/skills/types.js';
+import { AppError } from '../platform/errors.js';
 
 /**
  * Deterministic MOCK adapters for tests/dev — NO real network. Each mirrors the
@@ -46,8 +48,8 @@ export interface MockLLMOptions {
   /** Fixture returned by completeStructured (validated against the schema). */
   structured?: unknown;
   /**
-   * Per-schemaName fixtures for multi-call flows (e.g. the conventions 2-step
-   * dialogue: 'ConventionFileSelection' then 'ConventionExtraction'). Looked up
+   * Per-schemaName fixtures for flows that call several schemas (e.g.
+   * 'ConventionExtraction' in the conventions scan). Looked up
    * by req.schemaName; falls back to `structured` when no entry matches.
    */
   structuredBySchema?: Record<string, unknown>;
@@ -326,5 +328,18 @@ export class MockSecretsProvider implements SecretsProvider {
   constructor(private secrets: Partial<Record<string, string>> = {}) {}
   async get(key: SecretKey): Promise<string | undefined> {
     return this.secrets[key as string];
+  }
+}
+
+/** Test double for the URL-import fetcher: serves canned files by URL. */
+export class MockRemoteFetcher implements RemoteFetcher {
+  readonly requested: string[] = [];
+  constructor(private files: Record<string, { body: string | Uint8Array; contentType?: string }> = {}) {}
+  async get(url: string): Promise<FetchedFile> {
+    this.requested.push(url);
+    const f = this.files[url];
+    if (!f) throw new AppError('fetch_failed', 'The URL responded with 404', 422);
+    const bytes = typeof f.body === 'string' ? new TextEncoder().encode(f.body) : f.body;
+    return { bytes, contentType: f.contentType ?? 'text/plain', url };
   }
 }

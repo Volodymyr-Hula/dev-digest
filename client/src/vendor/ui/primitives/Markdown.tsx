@@ -43,19 +43,9 @@ export function Markdown({ children }: { children?: string | null }) {
           strong: ({ children }) => (
             <strong style={{ fontWeight: 650, color: "var(--text-primary)" }}>{children}</strong>
           ),
-          code: ({ children }) => (
-            <code
-              className="mono"
-              style={{
-                fontSize: "0.92em",
-                padding: "1px 6px",
-                borderRadius: 4,
-                background: "var(--bg-hover)",
-                color: "var(--accent-text)",
-              }}
-            >
-              {children}
-            </code>
+          // Inline vs fenced code is styled in styles.css (`.dd-md :not(pre) > code`, `.dd-md pre`).
+          code: ({ children, className }) => (
+            <code className={["mono", className].filter(Boolean).join(" ")}>{children}</code>
           ),
           a: ({ children, href }) => (
             <a

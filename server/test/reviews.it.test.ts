@@ -212,6 +212,56 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     await app.close();
   });
 
+  it('injects enabled linked skills into the prompt (by name, untrusted wrapped) and traces them', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const { pr } = await setupRepoAndPr(pg.handle.db, workspaceId);
+    const mk = async (name: string, extra: Record<string, unknown> = {}) =>
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/skills',
+          payload: { name, type: 'custom', body: `Rule of ${name}`, ...extra },
+        })
+      ).json();
+    const zed = await mk('zed-rule');
+    const alpha = await mk('alpha-rule', { trusted: false });
+    const off = await mk('off-rule', { enabled: false });
+    const agent = (
+      await app.inject({
+        method: 'POST',
+        url: '/agents',
+        payload: { name: 'Skilled', provider: 'openai', model: 'gpt-4.1', system_prompt: 'sec' },
+      })
+    ).json();
+    await app.inject({
+      method: 'POST',
+      url: `/agents/${agent.id}/skills`,
+      payload: { skill_ids: [zed.id, alpha.id, off.id] },
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/pulls/${pr.id}/review`,
+      payload: { agentId: agent.id },
+    });
+    const runId = res.json().runs[0].run_id;
+    await waitForPrRuns(pg.handle.db, pr.id, { expected: 1 });
+
+    const trace = (await app.inject({ method: 'GET', url: `/runs/${runId}/trace` })).json();
+    expect(trace.skills_used).toEqual([
+      { skill_id: alpha.id, name: 'alpha-rule', version: 1 },
+      { skill_id: zed.id, name: 'zed-rule', version: 1 },
+    ]);
+    const skillsText: string = trace.prompt_assembly.skills;
+    expect(skillsText).toContain('<untrusted source="skill-alpha-rule">\n### alpha-rule\nRule of alpha-rule');
+    expect(skillsText).toContain('### zed-rule\nRule of zed-rule');
+    expect(skillsText.indexOf('alpha-rule')).toBeLessThan(skillsText.indexOf('zed-rule'));
+    expect(skillsText).not.toContain('off-rule');
+    expect(trace.prompt_assembly.user).toContain('## Skills / rules');
+
+    await app.close();
+  });
+
   it('cost badge: run cost is snapshotted and served on runs, trace and the PR list', async () => {
     const app = await buildApp({
       config: config(),

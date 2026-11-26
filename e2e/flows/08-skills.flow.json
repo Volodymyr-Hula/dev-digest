@@ -1,0 +1,165 @@
+{
+  "name": "Skills Lab: skills page and the agent Skills tab render",
+  "description": "Loads /skills on a fresh stack (no skills are seeded) and confirms the empty state, the Add Skill menu and the create modal's inline validation (a non-kebab name shows its error on blur; nothing is submitted), then opens a seeded agent's Skills tab. Exercises the skills route, GET /skills and GET /agents/:id/skills. Read-only (no mutation, no model call).",
+  "steps": [
+    {
+      "cmd": [
+        "open",
+        "{BASE}/skills"
+      ],
+      "label": "load the skills page"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--url",
+        "/skills"
+      ],
+      "label": "skills route reached"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--load",
+        "networkidle"
+      ],
+      "label": "skills fetch settles"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "No skills yet"
+      ],
+      "label": "fresh stack shows the empty state"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Add Skill"
+      ],
+      "label": "open the Add Skill menu"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "Import from URL"
+      ],
+      "label": "menu lists the import options"
+    },
+    {
+      "cmd": [
+        "find",
+        "text",
+        "Create from scratch",
+        "click"
+      ],
+      "label": "open the create modal"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "kebab-case: lowercase letters, digits and dashes."
+      ],
+      "label": "create modal shows the name rule"
+    },
+    {
+      "cmd": [
+        "find",
+        "label",
+        "Name",
+        "fill",
+        "Security audit"
+      ],
+      "label": "type a non-kebab skill name"
+    },
+    {
+      "cmd": [
+        "press",
+        "Tab"
+      ],
+      "label": "leave the name field (blur)"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "Use lowercase letters, digits and single hyphens"
+      ],
+      "label": "the name error shows inline on blur"
+    },
+    {
+      "cmd": [
+        "open",
+        "{BASE}/agents"
+      ],
+      "label": "load the agents page"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--load",
+        "networkidle"
+      ],
+      "label": "agents fetch settles"
+    },
+    {
+      "cmd": [
+        "find",
+        "text",
+        "Security Reviewer",
+        "click"
+      ],
+      "label": "open the seeded agent"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--url",
+        "/agents/"
+      ],
+      "label": "agent editor route reached"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--load",
+        "networkidle"
+      ],
+      "label": "agent fetch settles"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Skills"
+      ],
+      "label": "open the agent Skills tab"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--url",
+        "tab=skills"
+      ],
+      "label": "skills tab is active in the URL"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "0 of 0 enabled"
+      ],
+      "label": "the Skills tab counts linked / total skills"
+    }
+  ]
+}

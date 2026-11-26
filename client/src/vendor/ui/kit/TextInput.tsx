@@ -8,6 +8,7 @@ export function TextInput({
   mono,
   type = "text",
   suffix,
+  invalid,
   ...rest
 }: {
   value: string;
@@ -16,6 +17,8 @@ export function TextInput({
   mono?: boolean;
   type?: string;
   suffix?: React.ReactNode;
+  /** Red border + aria-invalid (inline validation). */
+  invalid?: boolean;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type" | "size">) {
   return (
     <div
@@ -25,12 +28,13 @@ export function TextInput({
         gap: 10,
         padding: "10px 12px",
         borderRadius: 7,
-        border: "1px solid var(--border-strong)",
+        border: `1px solid ${invalid ? "var(--crit)" : "var(--border-strong)"}`,
         background: "var(--bg-elevated)",
       }}
     >
       <input
         {...rest}
+        aria-invalid={invalid || undefined}
         type={type}
         className={mono ? "mono" : undefined}
         value={value}

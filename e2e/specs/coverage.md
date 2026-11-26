@@ -11,8 +11,9 @@ One row per flow. A flow's journey and asserted fixtures must stay true; update 
 | `05-pr-diff` | PR #482 → Files changed tab | `/pulls/482?tab=diff` | `src/config.ts`; URL `tab=diff` | PR #482, `pr_files` |
 | `06-onboarding` | add-repository form renders, no submit | `/onboarding` | `Add a repository`; `Repository URL` | none |
 | `07-settings` | both settings sections render | `/settings/api-keys`, `/settings/models` | `API Keys`; `Feature Models` | none |
+| `08-skills` | skills empty state → Add Skill menu → create modal, non-kebab name + blur shows the inline error (no submit) → seeded agent's Skills tab | `/skills`, `/agents/<id>?tab=skills` | `No skills yet`; `Import from URL`; kebab-case name hint; `Use lowercase letters, digits and single hyphens`; URL `/agents/`, `tab=skills`; `0 of 0 enabled` | agents (no skills seeded) |
 
-Not covered (by design, they need a model or a mutation): running a review, onboarding submit, agent create/edit/delete, finding dismiss, inline diff comments, settings save/test connection.
+Not covered (by design, they need a model or a mutation): running a review, onboarding submit, agent create/edit/delete, skill create/edit/link/import/activate (covered by `server/test/skills.it.test.ts`, `skills-import.test.ts`, `reviews.it.test.ts`), finding dismiss, inline diff comments, settings save/test connection.
 
 Known gaps in what a passing flow proves:
 - `01` does not assert PR #482; it only proves client, API and DB answer (`flows/01-app-boot.flow.json:3`).

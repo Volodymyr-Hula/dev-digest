@@ -7,7 +7,7 @@
 | `src/app/**/page.tsx` | App Router pages — thin; feature logic lives in colocated `_components/<Name>/` |
 | `src/components/` | cross-page components (app-shell, diff-viewer, page-shell, mermaid-diagram, …) |
 | `src/lib/api.ts` | `apiFetch` + `ApiError` — the only HTTP client |
-| `src/lib/hooks/` | TanStack Query hooks per domain (`core`, `agents`, `reviews`, `repo-intel`, `trace`) |
+| `src/lib/hooks/` | TanStack Query hooks per domain (`core`, `agents`, `skills`, `reviews`, `repo-intel`, `trace`) |
 | `src/lib/` | providers, repo context, theme, toast, shared types |
 | `src/vendor/ui/` | `@devdigest/ui` design system |
 | `src/vendor/shared/` | copy of `@devdigest/shared` contracts |
@@ -22,6 +22,7 @@ Next.js 15.5 (App Router) · React 19 · TanStack Query 5 · Tailwind 4 · next-
 - A component is a folder: `Name.tsx`, `index.ts`, and as needed `constants.ts`, `helpers.ts`, `styles.ts`, `Name.test.tsx`. Nested children go in its own `_components/`.
 - `styles.ts` exports an object `s` of `CSSProperties` built on CSS variables (`var(--bg-elevated)`, …).
 - Import UI from the `@devdigest/ui` barrel only.
+- Imports across `app`/`components`/`lib`/`test` use the `@/` alias; relative `./` only inside one component folder.
 - Fetch data through hooks in `src/lib/hooks/*`, which wrap `apiFetch`.
 - User-facing strings go in `messages/<locale>/*.json`.
 
@@ -31,6 +32,7 @@ Next.js 15.5 (App Router) · React 19 · TanStack Query 5 · Tailwind 4 · next-
 
 ## Pointers
 
+- Read when creating, moving or renaming a file in `client/` (where it goes, how it is named): skill [client-layout](../.claude/skills/client-layout/SKILL.md)
 - Read when adding or changing a design-system component: [src/vendor/ui/README.md](src/vendor/ui/README.md)
 - Read when writing or running tests: [../TESTING.md](../TESTING.md)
 - Read when you need Server vs Client Component boundaries, the providers tree, data flow, query keys/invalidation, SSE live runs, i18n or the component-folder rationale: [docs/ui-architecture.md](docs/ui-architecture.md)

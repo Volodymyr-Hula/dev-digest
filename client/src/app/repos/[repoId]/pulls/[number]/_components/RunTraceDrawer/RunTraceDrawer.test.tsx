@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { RunTrace } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/runs.json"; // apps/web/messages/en/runs.json
@@ -13,14 +13,17 @@ const TRACE: RunTrace = {
   raw_output: '{"verdict":"request_changes"}',
   memory_pulled: [{ pr: 471, text: "rate-limit public endpoints" }],
   specs_read: [],
+  skills_used: [],
   log: [
     { t: "00.10", kind: "info", msg: "Starting review with agent Security" },
     { t: "00.90", kind: "result", msg: "Citation grounding: 2/2 passed" },
   ],
 };
 
+let trace: RunTrace = TRACE;
+
 vi.mock("../../../../../../../lib/hooks/trace", () => ({
-  useRunTrace: () => ({ data: TRACE, isLoading: false }),
+  useRunTrace: () => ({ data: trace, isLoading: false }),
 }));
 vi.mock("../../../../../../../lib/hooks/reviews", () => ({
   useRunEvents: () => ({ events: [], running: false }),
@@ -29,6 +32,9 @@ vi.mock("../../../../../../../lib/hooks/reviews", () => ({
 import RunTraceDrawer from "./RunTraceDrawer";
 
 afterEach(cleanup);
+beforeEach(() => {
+  trace = TRACE;
+});
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
@@ -45,6 +51,18 @@ describe("A5 Run Trace drawer (smoke)", () => {
     expect(screen.getByText("Stats")).toBeInTheDocument();
     expect(screen.getByText("2/2 passed")).toBeInTheDocument();
     expect(screen.getByText("Tool calls")).toBeInTheDocument();
+  });
+
+  it("shows 'none' under Skills when the run used no skills", () => {
+    renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
+    expect(screen.getByRole("group", { name: "Skills" })).toHaveTextContent("none");
+  });
+
+  it("lists the skills used with links to them", () => {
+    trace = { ...TRACE, skills_used: [{ skill_id: "sk1", name: "payments-api-conventions", version: 2 }] };
+    renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
+    const skills = screen.getByRole("group", { name: "Skills" });
+    expect(within(skills).getByRole("link", { name: "payments-api-conventions v2" })).toHaveAttribute("href", "/skills/sk1");
   });
 
   it("switches to the live log tab", () => {

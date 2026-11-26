@@ -1,8 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
 import type { Agent } from "@devdigest/shared";
-import messages from "../../../../../../messages/en/agents.json";
+import { IntlWrapper } from "@/test/intl";
 import { ToastProvider } from "../../../../../lib/toast";
 
 // Mock the data hooks so the editor renders without a network/query client.
@@ -28,13 +27,14 @@ const AGENT: Agent = {
   repo_intel: true,
   enabled: true,
   version: 1,
+  skill_count: 0,
 };
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ agents: messages }}>
+    <IntlWrapper>
       <ToastProvider>{ui}</ToastProvider>
-    </NextIntlClientProvider>,
+    </IntlWrapper>,
   );
 }
 

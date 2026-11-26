@@ -7,12 +7,16 @@ export function SelectInput({
   onChange,
   options,
   mono = true,
+  invalid,
+  ...rest
 }: {
   value: string;
   onChange?: (v: string) => void;
   options: (string | { value: string; label: string })[];
   mono?: boolean;
-}) {
+  /** Red border + aria-invalid (inline validation). */
+  invalid?: boolean;
+} & Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange">) {
   return (
     <div
       style={{
@@ -21,12 +25,14 @@ export function SelectInput({
         gap: 10,
         padding: "10px 12px",
         borderRadius: 7,
-        border: "1px solid var(--border-strong)",
+        border: `1px solid ${invalid ? "var(--crit)" : "var(--border-strong)"}`,
         background: "var(--bg-elevated)",
         position: "relative",
       }}
     >
       <select
+        {...rest}
+        aria-invalid={invalid || undefined}
         className={mono ? "mono" : undefined}
         value={value}
         onChange={(e) => onChange?.(e.target.value)}

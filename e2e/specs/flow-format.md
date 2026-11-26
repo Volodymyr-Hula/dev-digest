@@ -4,7 +4,7 @@ Contract between `flows/*.flow.json` and the runner. Each item is an invariant; 
 
 ## File
 
-- F1. A flow is a file `flows/NN-name.flow.json`; discovery is by the `.flow.json` suffix only (`run.ts:55`). `NN` is a two-digit prefix (all 7 current files follow it).
+- F1. A flow is a file `flows/NN-name.flow.json`; discovery is by the `.flow.json` suffix only (`run.ts:55`). `NN` is a two-digit prefix (all 8 current files follow it).
 - F2. Run order is `Array.sort()` of filenames (`run.ts:56`), so `NN` must be zero-padded or `10-` would run before `2-`. Flows must not depend on each other's side effects; the browser session is shared (`run.ts:3-9`) but every flow starts with its own `open` (all current flows do).
 - F3. Content is parsed with bare `JSON.parse`, no schema check (`run.ts:59`). Malformed JSON or a missing `steps` aborts the whole run with exit 1 (`run.ts:117-120`). Keep the file strict JSON (no comments; the `jsonc` block in README is illustrative).
 

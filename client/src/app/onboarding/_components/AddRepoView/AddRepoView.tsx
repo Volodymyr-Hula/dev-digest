@@ -9,12 +9,15 @@ import { useRouter } from "next/navigation";
 import { Button, Icon, IconBtn, Kbd, TextInput, FormField } from "@devdigest/ui";
 import { useAddRepo } from "@/lib/hooks";
 import { ApiError } from "@/lib/api";
+import { githubRepoUrl, required } from "@/lib/validation";
+import { useFormValidation } from "@/lib/useFormValidation";
 
 export function AddRepoView() {
   const router = useRouter();
   const [repoUrl, setRepoUrl] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const addRepo = useAddRepo();
+  const v = useFormValidation({ repoUrl }, { repoUrl: [required, githubRepoUrl] }, "add-repo");
 
   const close = React.useCallback(() => router.push("/"), [router]);
 
@@ -28,7 +31,7 @@ export function AddRepoView() {
   }, [close]);
 
   const submit = async () => {
-    if (!repoUrl.trim()) return;
+    if (!v.validateAll()) return;
     setError(null);
     try {
       const repo = await addRepo.mutateAsync(repoUrl.trim());
@@ -91,12 +94,13 @@ export function AddRepoView() {
           .
         </p>
 
-        <FormField label="Repository URL" hint="e.g. https://github.com/acme/payments-api">
+        <FormField label="Repository URL" hint="e.g. https://github.com/acme/payments-api" {...v.fieldProps("repoUrl")}>
           <TextInput
             value={repoUrl}
             onChange={setRepoUrl}
             mono
             placeholder="https://github.com/owner/repo"
+            {...v.controlProps("repoUrl")}
             onKeyDown={(e) => {
               if (e.key === "Enter") submit();
             }}
@@ -131,7 +135,7 @@ export function AddRepoView() {
             size="md"
             icon="Plus"
             onClick={submit}
-            disabled={!repoUrl.trim() || addRepo.isPending}
+            disabled={addRepo.isPending}
           >
             {addRepo.isPending ? "Cloning…" : "Add repository"}
           </Button>

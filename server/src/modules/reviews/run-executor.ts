@@ -6,7 +6,7 @@ import * as schema from '../../db/schema.js';
 import type { AgentRow } from '../../db/rows.js';
 import type { ReviewRepository, FindingRow, PullRow, ReviewRow } from './repository.js';
 import { REVIEW_STRATEGY } from './constants.js';
-import { taskLine } from './helpers.js';
+import { renderSkillsForPrompt, taskLine } from './helpers.js';
 import { loadDiff } from './diff-loader.js';
 
 /** Thrown by a run when the user cancels it mid-flight (between map files). */
@@ -184,6 +184,16 @@ export class ReviewRunExecutor {
 
       const task = taskLine(pull) + rankNote;
 
+      // Skills: every enabled skill linked to the agent goes into the prompt IN
+      // FULL (no lazy loading), ordered by name; untrusted ones are wrapped.
+      const linkedSkills = await this.agents.linkedSkills(agent.id);
+      const skills = renderSkillsForPrompt(linkedSkills.map((l) => l.skill));
+      if (skills.used.length > 0) {
+        runLog.info(
+          `Attached ${skills.used.length} skill(s): ${skills.used.map((s) => s.name).join(', ')}`,
+        );
+      }
+
       // ---- Engine: assemble → single-pass → grounding -----------------------
       // The pure review pipeline lives in @devdigest/reviewer-core (shared with
       // the CI runner). The service owns only I/O: repo-intel context resolution
@@ -204,6 +214,7 @@ export class ReviewRunExecutor {
         // PR author's description/body — untrusted; assemblePrompt wraps +
         // truncates it. Omitted when the PR has no body.
         ...(pull.body ? { prDescription: pull.body } : {}),
+        ...(skills.texts.length > 0 ? { skills: skills.texts } : {}),
         task,
         sessionId: `${repo.owner}/${repo.name}#${pull.number}:${agent.name}`,
         onEvent: (e) => runLog.event(e.kind, e.msg, e.data),
@@ -281,6 +292,7 @@ export class ReviewRunExecutor {
         raw_output: outcome.raw,
         memory_pulled: [],
         specs_read: [],
+        skills_used: skills.used,
         // Persisted log = the run's FULL event buffer (incl. shared pre-work:
         // diff load + intent), not just events recorded inside this method.
         log: runLog.logFor(runId),
@@ -431,6 +443,7 @@ export class ReviewRunExecutor {
       raw_output: '',
       memory_pulled: [],
       specs_read: [],
+      skills_used: [],
       log: this.container.runBus.buffer(runId).map((e) => ({ t: e.t, kind: e.kind, msg: e.msg })),
     };
   }

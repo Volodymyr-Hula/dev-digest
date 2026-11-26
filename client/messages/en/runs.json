@@ -31,6 +31,8 @@
     "config": {
       "model": "Model",
       "provider": "Provider",
+      "skills": "Skills",
+      "skillVersion": "{name} v{version}",
       "memoryPulled": "Memory pulled",
       "specsRead": "Specs read",
       "items": "{count, plural, one {# item} other {# items}}",
@@ -68,7 +70,7 @@
     "running": "running",
     "completed": "completed",
     "copyRawOutput": "Copy raw output",
-  "copied": "Copied!",
+    "copied": "Copied!",
     "tracePending": "Trace is written when the run completes — see the Live log tab.",
     "loadingTrace": "Loading trace…",
     "noTrace": "No trace available yet."

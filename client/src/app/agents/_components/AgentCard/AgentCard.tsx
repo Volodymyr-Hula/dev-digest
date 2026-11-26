@@ -13,13 +13,11 @@ import { s } from "./styles";
 export function AgentCard({
   ag,
   active,
-  skillCount,
   onClick,
   onToggle,
 }: {
   ag: Agent;
   active?: boolean;
-  skillCount?: number;
   onClick?: () => void;
   onToggle?: (enabled: boolean) => void;
 }) {
@@ -63,11 +61,9 @@ export function AgentCard({
         <span className="mono" style={s.modelChip(color)}>
           {ag.model}
         </span>
-        {skillCount != null && (
-          <Badge color="var(--text-secondary)" icon="Sparkles">
-            {t("card.skillCount", { count: skillCount })}
-          </Badge>
-        )}
+        <Badge color="var(--text-secondary)" icon="Sparkles">
+          {t("card.skillCount", { count: ag.skill_count })}
+        </Badge>
       </div>
     </div>
   );

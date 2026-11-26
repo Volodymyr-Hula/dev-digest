@@ -3,6 +3,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Badge } from "@devdigest/ui";
 import type { RunTrace, FindingRecord } from "@devdigest/shared";
@@ -32,6 +33,19 @@ export function TraceBody({ trace, findings }: { trace: RunTrace; findings: Find
             <span className="mono" style={s.configProvider}>
               {trace.config.provider ?? "—"}
             </span>
+          </Row>
+          <Row label={t("trace.config.skills")}>
+            <div style={s.specsWrap} role="group" aria-label={t("trace.config.skills")}>
+              {trace.skills_used.length === 0 ? (
+                <span style={s.specsNone}>{t("trace.config.none")}</span>
+              ) : (
+                trace.skills_used.map((sk) => (
+                  <Link key={sk.skill_id} href={`/skills/${sk.skill_id}`} className="mono" style={s.spec}>
+                    {t("trace.config.skillVersion", { name: sk.name, version: sk.version })}
+                  </Link>
+                ))
+              )}
+            </div>
           </Row>
           <Row label={t("trace.config.memoryPulled")}>
             <span>{t("trace.config.items", { count: trace.memory_pulled.length })}</span>

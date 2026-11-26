@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import type { CiFailOn, Provider, ReviewStrategy } from '@devdigest/shared';
@@ -53,6 +53,17 @@ export class AgentsRepository {
 
   async list(workspaceId: string): Promise<AgentRow[]> {
     return this.db.select().from(t.agents).where(eq(t.agents.workspaceId, workspaceId));
+  }
+
+  /** Linked-skill count per agent in the workspace (agents with none are absent). */
+  async skillCounts(workspaceId: string): Promise<Map<string, number>> {
+    const rows = await this.db
+      .select({ agentId: t.agentSkills.agentId, n: sql<number>`count(*)::int` })
+      .from(t.agentSkills)
+      .innerJoin(t.agents, eq(t.agentSkills.agentId, t.agents.id))
+      .where(eq(t.agents.workspaceId, workspaceId))
+      .groupBy(t.agentSkills.agentId);
+    return new Map(rows.map((r) => [r.agentId, r.n]));
   }
 
   async listEnabled(workspaceId: string): Promise<AgentRow[]> {
@@ -188,14 +199,14 @@ export class AgentsRepository {
 
   // ---- agent_skills link table (A2 owns the agent side) -------------------
 
-  /** Skills linked to an agent, in `order` ascending. */
+  /** Skills linked to an agent, by skill name ascending (= prompt order). */
   async linkedSkills(agentId: string): Promise<LinkedSkillRow[]> {
     const rows = await this.db
       .select({ skill: t.skills, order: t.agentSkills.order })
       .from(t.agentSkills)
       .innerJoin(t.skills, eq(t.agentSkills.skillId, t.skills.id))
       .where(eq(t.agentSkills.agentId, agentId))
-      .orderBy(asc(t.agentSkills.order));
+      .orderBy(asc(t.skills.name));
     return rows.map((r) => ({ skill: r.skill, order: r.order }));
   }
 
@@ -204,33 +215,33 @@ export class AgentsRepository {
     return links.map((l) => l.skill.id);
   }
 
-  /** Link a skill to an agent at a given order (idempotent: upserts order). */
-  async linkSkill(agentId: string, skillId: string, order: number): Promise<void> {
-    await this.db
-      .insert(t.agentSkills)
-      .values({ agentId, skillId, order })
-      .onConflictDoUpdate({
-        target: [t.agentSkills.agentId, t.agentSkills.skillId],
-        set: { order },
-      });
-  }
-
-  async unlinkSkill(agentId: string, skillId: string): Promise<void> {
-    await this.db
-      .delete(t.agentSkills)
-      .where(and(eq(t.agentSkills.agentId, agentId), eq(t.agentSkills.skillId, skillId)));
-  }
-
   /**
-   * Replace the full set of linked skills for an agent with `skillIds`, assigning
-   * order = index. Used by the "Skills" editor tab (attach/reorder). Skills not in
-   * the list are unlinked.
+   * Replace the full set of linked skills for an agent with `skillIds`. Order is
+   * not caller-controlled: skills reach the prompt by name, so `order` = index
+   * after sorting by name. Skills not in the list are unlinked.
    */
   async setSkills(agentId: string, skillIds: string[]): Promise<void> {
-    await this.db.delete(t.agentSkills).where(eq(t.agentSkills.agentId, agentId));
-    if (skillIds.length === 0) return;
-    await this.db
-      .insert(t.agentSkills)
-      .values(skillIds.map((skillId, i) => ({ agentId, skillId, order: i })));
+    await this.db.transaction(async (tx) => {
+      await tx.delete(t.agentSkills).where(eq(t.agentSkills.agentId, agentId));
+      if (skillIds.length === 0) return;
+      const named = await tx
+        .select({ id: t.skills.id })
+        .from(t.skills)
+        .where(inArray(t.skills.id, skillIds))
+        .orderBy(asc(t.skills.name));
+      await tx
+        .insert(t.agentSkills)
+        .values(named.map((s, i) => ({ agentId, skillId: s.id, order: i })));
+    });
+  }
+
+  /** The subset of `skillIds` that exist in the workspace. */
+  async skillIdsInWorkspace(workspaceId: string, skillIds: string[]): Promise<string[]> {
+    if (skillIds.length === 0) return [];
+    const rows = await this.db
+      .select({ id: t.skills.id })
+      .from(t.skills)
+      .where(and(eq(t.skills.workspaceId, workspaceId), inArray(t.skills.id, skillIds)));
+    return rows.map((r) => r.id);
   }
 }

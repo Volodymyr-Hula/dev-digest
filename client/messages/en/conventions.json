@@ -7,20 +7,67 @@
     "subtitle": "Scan the cloned repo to surface house-rules — each backed by evidence you can turn into a Skill.",
     "scanning": "Scanning…",
     "rescan": "Re-scan",
-    "runExtraction": "Run extraction",
-    "extractionFailed": "Extraction failed",
     "loadError": "Could not load conventions.",
     "empty": {
       "title": "No conventions extracted yet",
       "body": "Scan the repo to surface house-rules — naming, error handling, structure — each backed by evidence you can turn into a Skill.",
       "cta": "Run extraction"
     },
-    "candidateCount": "{count, plural, one {# candidate} other {# candidates}} · grounded against sampled files"
+    "noneFound": {
+      "title": "No new conventions found",
+      "body": "The last scan found nothing new. Rules you already accepted or rejected are never proposed again.",
+      "cta": "Re-scan"
+    },
+    "failed": {
+      "title": "Extraction failed",
+      "details": "Details: {error}",
+      "retry": "Retry",
+      "codes": {
+        "not_indexed": "The repo is not indexed yet. Wait until indexing finishes on the repo page, then run the scan again.",
+        "no_readable_files": "None of the sampled files could be read from the clone. Re-sync the repo, then run the scan again.",
+        "llm_failed": "The model call failed. Check the Conventions model and its API key in Settings, then retry.",
+        "timeout": "The scan took too long and was stopped. Retry, or pick a faster Conventions model in Settings.",
+        "interrupted": "The previous scan was interrupted (the API restarted). Run it again.",
+        "unknown": "The scan failed unexpectedly."
+      }
+    },
+    "stats": "{accepted} accepted · {rejected} rejected · {inSkills} in skills",
+    "acceptAsSkill": "Create skill",
+    "acceptAsSkillCount": "Create skill ({count})",
+    "sections": {
+      "pending": "To review",
+      "accepted": "Accepted",
+      "inSkills": "In skills",
+      "rejected": "Rejected"
+    }
   },
   "card": {
     "confidence": "Confidence",
     "accepted": "Accepted",
-    "accepting": "Accepting…",
-    "acceptAsSkill": "Accept as Skill"
+    "rejected": "Rejected",
+    "inSkill": "In skill",
+    "accept": "Accept",
+    "reject": "Reject",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "ruleLabel": "Rule"
+  },
+  "modal": {
+    "title": "Create a skill from conventions",
+    "subtitle": "{count, plural, one {# convention} other {# conventions}} selected — edit the text before saving. The rest stay available for another skill.",
+    "defaultDescription": "House conventions extracted from {repo}.",
+    "bodyHeading": "Conventions of {repo}",
+    "evidence": "Evidence",
+    "selectLabel": "Conventions in this skill",
+    "selectedCount": "{selected} of {total} selected",
+    "rebuildBody": "Rebuild body from selection",
+    "noneSelected": "Select at least one convention.",
+    "cancel": "Cancel",
+    "save": "Save skill",
+    "saving": "Saving…",
+    "createdToast": "Skill {name} created",
+    "attachFailed": "The skill was saved, but the conventions could not be marked as used.",
+    "retryAttach": "Retry"
   }
 }

@@ -103,7 +103,7 @@ Two complementary channels, both keyed on the server's `agent_runs` rows:
 - Single locale `en`, **no locale routing** (`i18n/request.ts:14,27-30`); plugin registered in `next.config.mjs` (`createNextIntlPlugin("./src/i18n/request.ts")`).
 - Messages: one JSON per namespace in `messages/en/<ns>.json` (18 files). `loadMessages` reads the directory and merges to `{ <ns>: {...} }` (`request.ts:19-25`), so a feature adds a namespace without touching shared code.
 - Use `useTranslations("<ns>")` in client code (used across `app/` and `components/`); `getLocale/getMessages` only in the layout.
-- Adoption is **partial**: lists, agents list/editor tabs, settings, run status/trace use messages; `/`, `/onboarding`, `/agents/:id` page chrome, the PR detail page and its header/tabs, `OverviewTab`, `DiffTab`, `FindingsTab`, `ReviewRunAccordion` still contain literal English. Several namespaces (`blast`, `brief`, `ci`, `eval`, `memory`, `skills`, …) are for screens not in this starter. New user-facing strings must go to messages (see [../CLAUDE.md](../CLAUDE.md) conventions).
+- Adoption is **partial**: lists, agents list/editor tabs, settings, run status/trace use messages; `/`, `/onboarding`, `/agents/:id` page chrome, the PR detail page and its header/tabs, `OverviewTab`, `DiffTab`, `FindingsTab`, `ReviewRunAccordion` still contain literal English. Several namespaces (`blast`, `brief`, `ci`, `eval`, `memory`, …) are for screens not in this starter. `validation` holds the shared inline form-validation messages (pattern: [specs/pages.md → Forms](../specs/pages.md#forms--inline-validation)). New user-facing strings must go to messages (see [../CLAUDE.md](../CLAUDE.md) conventions).
 
 ## Design system (`@devdigest/ui`)
 

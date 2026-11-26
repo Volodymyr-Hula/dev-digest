@@ -4,9 +4,11 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { FormField, TextInput, SelectInput, SearchableSelect, Textarea, Toggle, Button } from "@devdigest/ui";
 import type { Agent, CiFailOn, Provider, ReviewStrategy } from "@devdigest/shared";
-import { useUpdateAgent, useProviderModels } from "../../../../../../../lib/hooks/agents";
-import { useToast } from "../../../../../../../lib/toast";
-import { toModelOptions } from "../../../../../../../lib/model-label";
+import { useUpdateAgent, useProviderModels } from "@/lib/hooks/agents";
+import { useToast } from "@/lib/toast";
+import { toModelOptions } from "@/lib/model-label";
+import { required } from "@/lib/validation";
+import { useFormValidation } from "@/lib/useFormValidation";
 import { CI_FAIL_ON_VALUES, OUTPUT_SCHEMA_VALUE, PROVIDER_OPTIONS, STRATEGY_VALUES } from "./constants";
 import { s } from "./styles";
 
@@ -25,18 +27,13 @@ export function ConfigTab({ agent }: { agent: Agent }) {
   const [repoIntel, setRepoIntel] = React.useState(agent.repo_intel);
   const [enabled, setEnabled] = React.useState(agent.enabled);
 
-  // Reset local form when switching agents.
-  React.useEffect(() => {
-    setName(agent.name);
-    setDescription(agent.description);
-    setProvider(agent.provider);
-    setModel(agent.model);
-    setSystemPrompt(agent.system_prompt);
-    setStrategy(agent.strategy);
-    setCiFailOn(agent.ci_fail_on);
-    setRepoIntel(agent.repo_intel);
-    setEnabled(agent.enabled);
-  }, [agent.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const v = useFormValidation(
+    { name, systemPrompt },
+    { name: [required], systemPrompt: [required] },
+    "agent-config",
+  );
+
+  // State is initialised from `agent` once; AgentEditor remounts this tab (key = agent.id) per agent.
 
   const { data: models } = useProviderModels(provider);
   // Show the price (USD per 1M in/out tokens) in the label when the provider
@@ -52,7 +49,8 @@ export function ConfigTab({ agent }: { agent: Agent }) {
   const strategyOptions = STRATEGY_VALUES.map((v) => ({ value: v, label: t(`config.strategyOptions.${v}`) }));
   const ciFailOnOptions = CI_FAIL_ON_VALUES.map((v) => ({ value: v, label: t(`config.ciFailOnOptions.${v}`) }));
 
-  const save = () =>
+  const save = () => {
+    if (!v.validateAll()) return;
     update.mutate(
       {
         id: agent.id,
@@ -74,6 +72,7 @@ export function ConfigTab({ agent }: { agent: Agent }) {
         onSuccess: (data) => toast.success(t("config.savedToast", { version: data.version })),
       },
     );
+  };
 
   return (
     <div style={s.wrap}>
@@ -84,8 +83,8 @@ export function ConfigTab({ agent }: { agent: Agent }) {
           <Toggle on={enabled} onChange={setEnabled} size={16} />
         </label>
       </div>
-      <FormField label={t("config.name")} required>
-        <TextInput value={name} onChange={setName} />
+      <FormField label={t("config.name")} required {...v.fieldProps("name")}>
+        <TextInput value={name} onChange={setName} {...v.controlProps("name")} />
       </FormField>
       <FormField label={t("config.description")}>
         <TextInput value={description} onChange={setDescription} />
@@ -127,8 +126,19 @@ export function ConfigTab({ agent }: { agent: Agent }) {
           <Toggle on={repoIntel} onChange={setRepoIntel} size={16} />
         </label>
       </FormField>
-      <FormField label={t("config.systemPrompt")} hint={t("config.systemPromptHint")}>
-        <Textarea value={systemPrompt} onChange={setSystemPrompt} rows={8} mono />
+      <FormField
+        label={t("config.systemPrompt")}
+        hint={t("config.systemPromptHint")}
+        required
+        {...v.fieldProps("systemPrompt")}
+      >
+        <Textarea
+          value={systemPrompt}
+          onChange={setSystemPrompt}
+          rows={8}
+          mono
+          {...v.controlProps("systemPrompt")}
+        />
       </FormField>
       <FormField label={t("config.outputSchema")}>
         <SelectInput value={OUTPUT_SCHEMA_VALUE} options={[OUTPUT_SCHEMA_VALUE]} />
