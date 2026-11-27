@@ -21,6 +21,7 @@ Source of truth: `server/src/db/seed.ts`, applied by `pnpm db:migrate && pnpm db
 | Review | `kind: review`, `verdict: request_changes`, `score: 61`, `model: 'seed'`; no agent id or run id is set | `seed.ts:136-147` | 04 |
 | Finding 1 | CRITICAL, `Hardcoded Stripe secret key in commit`, `src/config.ts:12` | `seed.ts:150-162` | 04 |
 | Finding 2 | WARNING, `N+1 query in user list endpoint`, `src/api/users.ts:45-52` | `seed.ts:163-174` | 04 (count only) |
+| PR intent | `pr_intent` row for PR #482: `source: model`, class `feature`, confidence `medium`, summary `Add token-bucket rate limiting to the public API so unauthenticated clients cannot abuse it.`, sources include `ticket_key PAY-482` (`referenced_not_fetched`) | `seed.ts` (`PR #482 intent` block) | 09 (flow saves a user edit; later flows do not read it) |
 | Agents | `General Reviewer`, `Security Reviewer`, `Performance Reviewer`, `API Contract Reviewer`, all enabled, openrouter / `deepseek/deepseek-v4-flash` | `seed.ts:180-214` | 03 (`Security Reviewer` only) |
 
 Derived UI strings the flows assert:
