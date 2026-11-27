@@ -1,0 +1,23 @@
+{
+  "name": "PR intent: seeded intent shows on the Overview tab, can be edited and saved as a user intent",
+  "description": "Open PR #482 (Overview is the default tab) and confirm the seeded model-derived intent panel (summary, medium confidence, an unfetched ticket source). Edit the summary, save, and confirm the new summary renders with the 'user' marker. The save is a PUT to the API; no model is called. Assumes a freshly seeded DB (see seed-fixtures.md).",
+  "steps": [
+    { "cmd": ["open", "{BASE}/"], "label": "load the app root" },
+    { "cmd": ["wait", "--url", "/pulls"], "label": "land on the PR list" },
+    { "cmd": ["wait", "--text", "Add rate limiting to public API endpoints"], "label": "seeded PR title row is visible" },
+    { "cmd": ["find", "text", "Add rate limiting to public API endpoints", "click"], "label": "open the PR row" },
+    { "cmd": ["wait", "--url", "/pulls/482"], "label": "navigate to the PR detail route" },
+    { "cmd": ["wait", "--load", "networkidle"], "label": "PR detail and intent data settle" },
+    { "cmd": ["wait", "--text", "Add token-bucket rate limiting to the public API so unauthenticated clients cannot abuse it."], "label": "seeded intent summary renders on the Overview tab" },
+    { "cmd": ["wait", "--text", "Medium confidence"], "label": "confidence badge shows the seeded medium confidence" },
+    { "cmd": ["wait", "--text", "PAY-482"], "label": "seeded ticket-key source is listed" },
+    { "cmd": ["wait", "--text", "not fetched"], "label": "ticket-key source shows the not-fetched status" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Edit", "--exact"], "label": "open the intent editor" },
+    { "cmd": ["find", "label", "Summary", "fill", "Rate limiting for public endpoints (edited in e2e)"], "label": "replace the summary" },
+    { "cmd": ["scrollintoview", "[data-testid=\"intent-edit-form\"] button[type=\"submit\"]"], "label": "scroll the Save button into view (the PR page scrolls inside an inner container)" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Save", "--exact"], "label": "save the edited intent" },
+    { "cmd": ["wait", "--text", "Rate limiting for public endpoints (edited in e2e)"], "label": "saved summary renders after the PUT round trip" },
+    { "cmd": ["wait", "--text", "user"], "label": "the 'user' marker appears next to the confidence badge" },
+    { "cmd": ["wait", "--text", "High confidence"], "label": "a user intent is stored with high confidence" }
+  ]
+}

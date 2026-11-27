@@ -20,6 +20,7 @@ Each module has its own `CLAUDE.md`, plus `docs/`, `specs/` and `INSIGHTS.md`. R
 | `scripts/` | `dev.sh` (whole dev stack), `e2e.sh` (isolated e2e stack) |
 | `docs/agent-prompts/` | canonical reviewer-agent system prompts |
 | `.claude/skills/` | project skills (Fastify, Drizzle, Next, React, zod, …) |
+| `.claude/agents/` | project subagents: `researcher`, `planner`, `brainstorm`, `architecture-reviewer`, `security-reviewer`, `plan-verifier`, `implementer`, `test-writer`, `doc-writer` (catalog: `.claude/skills/README.md`) |
 | `.github/workflows/` | one path-filtered CI workflow per suite |
 
 ## Shared stack

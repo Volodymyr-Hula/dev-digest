@@ -224,6 +224,13 @@ export interface GitClient {
   blame(repo: RepoRef, path: string): Promise<BlameLine[]>;
   log(repo: RepoRef, path?: string): Promise<GitCommit[]>;
   readFile(repo: RepoRef, path: string): Promise<string>;
+  /**
+   * Read `path` as of `ref` (`git show <ref>:<path>`), without touching the
+   * working tree. `ref` must be a 7–40 char hex sha or `pr-<digits>`; `path`
+   * must be relative with no `..` segment, NUL byte or leading `-`. Rejects
+   * invalid input before running git.
+   */
+  showFile(repo: RepoRef, ref: string, path: string): Promise<string>;
   clonePathFor(repo: RepoRef): string;
 }
 

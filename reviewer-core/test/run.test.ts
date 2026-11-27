@@ -135,4 +135,35 @@ describe('reviewPullRequest (engine)', () => {
     expect(seen.length).toBeGreaterThan(0);
     expect(seen.every((s) => s === 'sess-abc')).toBe(true);
   });
+
+  it('forwards ReviewInput.intent into the reviewer prompt as an untrusted ## PR intent section', async () => {
+    const llm = new MockLLMProvider('openai', { structured: fixture });
+    const diff = await new MockGitClient().diff();
+    await reviewPullRequest({
+      systemPrompt: 's',
+      model: 'gpt-4.1',
+      diff,
+      llm,
+      intent: 'Class: bugfix\nSummary: Fix the off-by-one in pagination.',
+    });
+    const userPrompts = llm.calls
+      .filter((c) => c.method === 'completeStructured')
+      .map((c) => (c.req as { messages: { role: string; content: string }[] }).messages[1]!.content);
+    expect(userPrompts.length).toBeGreaterThan(0);
+    for (const user of userPrompts) {
+      expect(user).toContain('## PR intent');
+      expect(user).toContain('<untrusted source="pr-intent">');
+      expect(user).toContain('Fix the off-by-one in pagination.');
+    }
+  });
+
+  it('adds no intent section when ReviewInput.intent is not passed (CI runner path)', async () => {
+    const llm = new MockLLMProvider('openai', { structured: fixture });
+    const diff = await new MockGitClient().diff();
+    await reviewPullRequest({ systemPrompt: 's', model: 'gpt-4.1', diff, llm });
+    for (const c of llm.calls.filter((c) => c.method === 'completeStructured')) {
+      const user = (c.req as { messages: { content: string }[] }).messages[1]!.content;
+      expect(user).not.toContain('## PR intent');
+    }
+  });
 });

@@ -39,8 +39,8 @@ The `E2E_*` ports differ from the dev ports ([root README](../../README.md)), so
 1. **Load**: every `*.flow.json` in `flows/`, sorted lexically, `JSON.parse`d with no schema validation (`run.ts:53-61`). Zero flows exits 1 (`:98-101`).
 2. **Run**: flows run sequentially; steps within a flow run sequentially (`:103-107`, `:68`).
 3. **Step**: `{BASE}` is substituted (`lib/assert.ts:157-160`), then `execFile(BIN, args)` with cwd `e2e/`, per-command timeout `E2E_STEP_TIMEOUT` (60 s), 32 MiB stdout buffer (`run.ts:44-51`). Because agent-browser keeps a daemon, every command lands in the same browser session; page, cookies and storage carry across steps and across flows.
-4. **Assert**: the only built-in assertion is exit code. `wait --text` / `wait --url` time out non-zero, so they are the assertions. Optional `assert.stdoutIncludes` is a substring check (`run.ts:73-77`, `lib/assert.ts:162-164`).
-5. **Failure**: first failing step ends that flow (`break`), the remaining flows still run. On a thrown command error, a best-effort `screenshot test-results/<flow-id>-fail.png` is taken (`run.ts:80-88`); a `stdoutIncludes` mismatch does not take a screenshot (`run.ts:73-77`).
+4. **Assert**: the only built-in assertion is exit code. `wait --text` / `wait --url` time out non-zero, so they are the assertions. Optional `assert.stdoutIncludes` is a substring check (`run.ts:74-78`); optional `assert.stdoutInOrder` requires every string to appear in that order (`run.ts:79-83`, `lib/assert.ts` `stdoutContainsInOrder`), used with `get text <selector>` to assert ordering (`flows/10-smart-diff.flow.json`).
+5. **Failure**: first failing step ends that flow (`break`), the remaining flows still run. On a thrown command error, a best-effort `screenshot test-results/<flow-id>-fail.png` is taken (`run.ts:80-88`); a `stdoutIncludes` / `stdoutInOrder` mismatch does not take a screenshot (`run.ts:74-83`).
 6. **Finish**: `agent-browser close` in `finally` (`:108-111`), then `summarize` prints PASS/FAIL per flow plus failed steps and `N/M flows passed` (`lib/assert.ts:166-178`).
 
 Exit codes: `0` all flows passed; `1` any flow failed, no flows found, or runner crash (`run.ts:114`, `:100`, `:117-120`).
@@ -49,7 +49,14 @@ Exit codes: `0` all flows passed; `1` any flow failed, no flows found, or runner
 
 ## Why no model call happens
 
-Flows only read what `server/src/db/seed.ts` inserted: a repo, one PR, one pre-made review with two findings, three agents. They never click Run Review, submit the onboarding form, or use agent-browser's AI `chat` command, and locators are `--url`/`--text`/`find`. The API also boots without keys: the CI header states `loadConfig()` marks every secret optional (`.github/workflows/e2e-web.yml:7-8`). Enforced as a rule in [../specs/flow-format.md](../specs/flow-format.md); fixture list in [../specs/seed-fixtures.md](../specs/seed-fixtures.md).
+Flows only read what `server/src/db/seed.ts` inserted: a repo, one PR, one pre-made review with two findings, one `pr_intent` row for that PR (`seed.ts`, "PR #482 intent": `source: 'model'`, medium confidence, an unfetched `PAY-482` ticket source), three agents. They never click Run Review, submit the onboarding form, or use agent-browser's AI `chat` command, and locators are `--url`/`--text`/`find`. The API also boots without keys: the CI header states `loadConfig()` marks every secret optional (`.github/workflows/e2e-web.yml:7-8`). Enforced as a rule in [../specs/flow-format.md](../specs/flow-format.md); fixture list in [../specs/seed-fixtures.md](../specs/seed-fixtures.md).
+
+## Flow-authoring notes (from `flows/09-pr-intent.flow.json`)
+
+- **`09-pr-intent` depends on the seeded intent.** It opens PR #482, expects the seeded summary, "Medium confidence" and the `PAY-482` source with "not fetched" on the Overview tab, then edits the summary and saves through `PUT /pulls/:id/intent` (no model call). Because it saves a user intent ("High confidence", "user" marker), it assumes a freshly seeded DB.
+- **Scroll an off-screen control into view first.** The PR page scrolls inside an inner container, so a click on a control outside the viewport lands at off-viewport coordinates; the flow adds a `scrollintoview <css>` step before clicking Save (`flows/09-pr-intent.flow.json:17`). `scroll down` scrolls the window, not that container, and does not help.
+- **`find label X fill` needs a real `<label>`.** It only resolves controls inside or associated with a `<label>`; that is why `IntentEditForm` wraps each control in one (`client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/_components/IntentPanel/_components/IntentEditForm/IntentEditForm.tsx`).
+- **Local runs may need agent-browser's Node on `PATH`.** If it was installed under another mise Node, `scripts/e2e.sh` only warns it is not found; see the `mise ERROR agent-browser is not provided by the active node` entry in root [INSIGHTS.md](../../INSIGHTS.md).
 
 ## CI (`.github/workflows/e2e-web.yml`)
 

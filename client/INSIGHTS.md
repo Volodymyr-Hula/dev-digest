@@ -8,7 +8,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 ## What Doesn't Work
 <!-- dead ends and antipatterns, each with why it failed; the most valuable section -->
 - **Don't size an auto-growing `<textarea rows={n}>` inside a `display:flex` row that has `maxHeight` — give it an explicit `height` and `alignItems:"flex-start"`** — the default `align-items: stretch` stretches the textarea to the clamped box height (520px), so with `overflowY:hidden` every line past ~25 was silently cut off while the line-number gutter kept counting. Evidence: `src/app/skills/[id]/_components/SkillEditor/_components/ConfigTab/_components/BodyEditor/styles.ts` `textareaHeight`; imported 504-line skill showed only 25 lines. (2026-11-24)
-- **Don't pair `borderColor`/`borderWidth` with `borderLeft*` in an inline style that changes on rerender — use the four per-side longhands** — `borderColor`/`borderWidth` are shorthands too; React logs `Updating a style property during rerender (borderColor) when a conflicting property is set (borderLeftColor)` once the value toggles (e.g. on focus). Evidence: `src/app/repos/[repoId]/pulls/[number]/_components/FindingCard/styles.ts:5-16`. (2026-11-20)
+- **Don't pair `borderColor`/`borderWidth` with `borderLeft*` in an inline style that changes on rerender — use the four per-side longhands** — `borderColor`/`borderWidth` are shorthands too; React logs `Updating a style property during rerender (borderColor) when a conflicting property is set (borderLeftColor)` once the value toggles (e.g. on focus). Evidence: `src/components/finding-card/styles.ts:5-16`. (2026-11-20)
 
 ## Codebase Patterns
 <!-- unwritten conventions and architectural decisions, with the reason -->
@@ -20,12 +20,15 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Recurring Errors & Fixes
 <!-- exact error text → cause → fix -->
+- **After moving a file that has a depcruise known violation, fix the import instead of re-baselining** — the baseline is keyed by path, so the moved violation turns into a new error (`FindingCard.test.tsx` → `../../../messages/en/prReview.json`); use `IntlWrapper` from `@/test/intl` and drop the stale baseline rows. Evidence: `.dependency-cruiser-known-violations.json`; `src/components/finding-card/FindingCard.test.tsx`. (2026-11-27)
+- **In a `src/components/*` component, call `useTranslations` for a non-`shell` namespace only inside a child that renders when needed** — `src/test/smoke.test.tsx` provides only `{ shell }`, so a top-level `useTranslations("prReview")` logs `MISSING_MESSAGE` even when no text is used. Evidence: `src/components/diff-viewer` `FindingDot` / `SeverityLineLabel`. (2026-11-27)
 - **Read uploaded files with `FileReader` (`readFileBytes` in `ImportSkillModal/helpers.ts`), not `File#arrayBuffer()`** — jsdom's `File` has no `arrayBuffer`, so component tests fail with `TypeError: file.arrayBuffer is not a function`; `FileReader.readAsArrayBuffer` works in jsdom and browsers. Evidence: `ImportSkillModal.test.tsx` first run. (2026-11-24)
 - **Import only types (`import type`) from `@devdigest/shared` in client code; mirror small runtime rules locally** — the vendored barrel re-exports with `.js` specifiers that Next's bundler cannot resolve, so a value import (e.g. a zod schema) passes `pnpm typecheck` and `pnpm test` but the page 500s in `next dev` with `Module not found: Can't resolve './contracts/findings.js'` (`src/vendor/shared/index.ts:17`). Only the e2e stack / browser catches it. Pattern: `isValidSkillName` in `src/lib/skill-meta.ts` mirrors `SkillName`, with a parity test against the contract (`skill-meta.test.ts`). Evidence: `scripts/e2e.sh` log, `GET /skills 500`. (2026-11-24)
 - **Use `getAllByText`/`queryAllByText` for an agent name in tests that render an open `ReviewRunAccordion`** — the name shows in the accordion header and again in `VerdictBanner` (`agentName`), so `getByText` throws `Found multiple elements with the text`. Evidence: `src/app/repos/[repoId]/pulls/[number]/_components/ReviewRunAccordion/ReviewRunAccordion.tsx:93` (header) + `VerdictBanner/VerdictBanner.tsx:46-50` (badge). (2026-11-20)
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-27 — Smart Diff (groups, finding dots, inline FindingCard, FindingCard moved to `src/components/finding-card`) → MISSING_MESSAGE in shared components; depcruise baseline after a move.
 - 2026-11-24 — pr-self-review fixes (SkillCard move, userEvent tests, modal errors) → global mutation toast rule.
 - 2026-11-24 — conventions page states, evidence links, multi-skill modal, trace skills row → `ErrorState` `retryLabel`.
 - 2026-11-24 — long imported skill clipped in BodyEditor → flex-stretch textarea rule.

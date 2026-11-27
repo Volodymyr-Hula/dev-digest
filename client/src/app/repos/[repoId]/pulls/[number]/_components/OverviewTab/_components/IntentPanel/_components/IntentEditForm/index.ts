@@ -1,0 +1,1 @@
+export { IntentEditForm } from "./IntentEditForm";

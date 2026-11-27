@@ -1,0 +1,58 @@
+import type { CSSProperties } from "react";
+
+export const s = {
+  panel: {
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    background: "var(--bg-elevated)",
+    padding: 18,
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+  } satisfies CSSProperties,
+  headerRow: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } satisfies CSSProperties,
+  spacer: { flex: 1 } satisfies CSSProperties,
+  summary: {
+    margin: 0,
+    fontSize: 14,
+    lineHeight: 1.55,
+    color: "var(--text-primary)",
+    whiteSpace: "pre-wrap",
+  } satisfies CSSProperties,
+  rationale: { fontSize: 13, lineHeight: 1.5, color: "var(--text-secondary)" } satisfies CSSProperties,
+  notice: {
+    display: "flex",
+    gap: 8,
+    alignItems: "flex-start",
+    padding: "10px 12px",
+    borderRadius: 7,
+    border: "1px solid var(--border)",
+    background: "var(--warn-bg)",
+    color: "var(--text-secondary)",
+    fontSize: 13,
+    lineHeight: 1.5,
+  } satisfies CSSProperties,
+  scopeGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    gap: 14,
+  } satisfies CSSProperties,
+  scopeSummary: {
+    cursor: "pointer",
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: "0.05em",
+    textTransform: "uppercase",
+    color: "var(--text-muted)",
+  } satisfies CSSProperties,
+  scopeList: {
+    margin: "8px 0 0",
+    paddingLeft: 18,
+    fontSize: 13,
+    lineHeight: 1.5,
+    color: "var(--text-secondary)",
+  } satisfies CSSProperties,
+  muted: { fontSize: 12, color: "var(--text-muted)" } satisfies CSSProperties,
+  empty: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } satisfies CSSProperties,
+  emptyText: { fontSize: 14, color: "var(--text-secondary)" } satisfies CSSProperties,
+} as const;

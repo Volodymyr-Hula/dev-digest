@@ -15,7 +15,10 @@ import {
   Settings,
   Repo,
   PrDetail,
+  IntentClassification,
+  FEATURE_MODELS,
 } from '@devdigest/shared';
+import { toJsonSchema } from '../src/platform/structured.js';
 
 /**
  * Contract tests — parse/round-trip the fixtures from data.jsx/data2.jsx
@@ -208,5 +211,37 @@ describe('platform DTOs', () => {
         commits: [],
       }),
     ).not.toThrow();
+  });
+});
+
+describe('IntentClassification (classifier output contract)', () => {
+  it('serialises to a strict JSON schema with no length/size constraints and no confidence key', () => {
+    const { schema } = toJsonSchema(IntentClassification, 'IntentClassification');
+    const text = JSON.stringify(schema);
+    // strict json_schema providers reject these; caps are applied in code instead
+    for (const keyword of ['minLength', 'maxLength', 'minItems', 'maxItems', 'minimum', 'maximum']) {
+      expect(text).not.toContain(`"${keyword}"`);
+    }
+    // confidence is computed deterministically, never taken from the model
+    expect(Object.keys((schema as { properties: object }).properties)).not.toContain('confidence');
+    expect(Object.keys((schema as { properties: object }).properties).sort()).toEqual(
+      ['in_scope', 'intent_class', 'out_of_scope', 'rationale', 'summary'],
+    );
+  });
+
+  it('rejects an unknown intent_class and strips a model-supplied confidence', () => {
+    const ok = { intent_class: 'feature', summary: 's', rationale: 'r', in_scope: [], out_of_scope: [] };
+    expect(IntentClassification.safeParse({ ...ok, intent_class: 'rewrite' }).success).toBe(false);
+    expect(IntentClassification.parse({ ...ok, confidence: 'high' })).not.toHaveProperty('confidence');
+  });
+});
+
+describe('feature-model registry: review_intent', () => {
+  it('defaults to OpenRouter deepseek-v4-flash with the "PR Intent (classifier)" label', () => {
+    expect(FEATURE_MODELS.find((f) => f.id === 'review_intent')).toMatchObject({
+      label: 'PR Intent (classifier)',
+      defaultProvider: 'openrouter',
+      defaultModel: 'deepseek/deepseek-v4-flash',
+    });
   });
 });

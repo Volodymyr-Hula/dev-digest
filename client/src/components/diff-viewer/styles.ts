@@ -90,3 +90,37 @@ export function lineSignFor(kind: Line["kind"]): CSSProperties {
     flexShrink: 0,
   };
 }
+
+/** Red dot on a file header: the file has findings (no number; distinct from the comment counter). */
+export const findingDot: CSSProperties = {
+  width: 8,
+  height: 8,
+  borderRadius: "50%",
+  background: "var(--crit)",
+  flexShrink: 0,
+};
+
+/** Left colour bar on a line that hosts a finding. Per-side longhands only (never `borderColor` + `borderLeft*`). */
+export function lineBar(color: string): CSSProperties {
+  return { borderLeftWidth: 3, borderLeftStyle: "solid", borderLeftColor: color };
+}
+
+/** Right-hand severity label on a line that hosts a finding. */
+export function lineSevLabel(color: string): CSSProperties {
+  return {
+    flexShrink: 0,
+    alignSelf: "center",
+    marginRight: 12,
+    fontSize: 11,
+    fontWeight: 700,
+    color,
+  };
+}
+
+/** Indented rail for inline finding cards, aligned like comment threads (past the gutter). */
+export const findingRail: CSSProperties = {
+  margin: "6px 14px 8px 58px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+};

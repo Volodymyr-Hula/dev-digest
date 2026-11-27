@@ -94,3 +94,60 @@ describe('SimpleGitClient.clone', () => {
     await expect(access(sentinel)).resolves.toBeUndefined();
   });
 });
+
+/**
+ * SC-010 / FR-043 — `showFile(repo, ref, path)` runs `git show <ref>:<path>`.
+ * Hostile path/ref are refused BEFORE git starts: the repo below was never
+ * cloned, so if git were spawned the error would be a git/ENOENT one, not our
+ * own "Invalid …" message.
+ */
+describe('SimpleGitClient.showFile', () => {
+  const SHA = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';
+  const neverCloned = { owner: 'never', name: 'cloned' };
+
+  it.each([
+    ['../secret.md', 'a ".." segment'],
+    ['docs/../../secret.md', 'a nested ".." segment'],
+    ['/etc/passwd', 'an absolute path'],
+    ['-o.md', 'a leading "-"'],
+    ['docs/a\0.md', 'a NUL byte'],
+    ['', 'an empty path'],
+  ])('rejects path %j (%s) before spawning git', async (path) => {
+    const client = new SimpleGitClient(cloneDir);
+    await expect(client.showFile(neverCloned, SHA, path)).rejects.toThrow(/Invalid path/);
+  });
+
+  it.each(['HEAD;rm', 'HEAD', 'main', '--output=x', 'abc12', 'pr-', 'pr-1x', `${SHA}0`, '../x'])(
+    'rejects ref %j before spawning git',
+    async (ref) => {
+      const client = new SimpleGitClient(cloneDir);
+      await expect(client.showFile(neverCloned, ref, 'README.md')).rejects.toThrow(/Invalid git ref/);
+    },
+  );
+
+  it('lets a valid sha / pr-N ref and a plain path through to git (control: fails as git, not as validation)', async () => {
+    const client = new SimpleGitClient(cloneDir);
+    for (const ref of [SHA, 'abcdef1', 'pr-482']) {
+      const err = await client.showFile(neverCloned, ref, 'docs/plan.md').catch((e: Error) => e);
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).not.toMatch(/Invalid (path|git ref)/);
+    }
+  });
+
+  it('returns the committed content for a valid sha and path, not the working-tree copy', async () => {
+    const sha = run(upstream, 'rev-parse', 'HEAD');
+    const client = new SimpleGitClient(cloneDir);
+    const repo = { owner: 'acme', name: 'show-file' };
+    const { path } = await client.clone(repo, upstream);
+
+    await writeFile(join(path, 'README.md'), 'edited in the working tree\n');
+    expect(await client.showFile(repo, sha, 'README.md')).toBe('hello\n');
+    expect(await client.showFile(repo, sha.slice(0, 7), 'README.md')).toBe('hello\n');
+  });
+
+  it('fails (does not return stale content) when the path is absent at that sha', async () => {
+    const sha = run(upstream, 'rev-parse', 'HEAD');
+    const client = new SimpleGitClient(cloneDir);
+    await expect(client.showFile({ owner: 'acme', name: 'show-file' }, sha, 'nope/missing.md')).rejects.toThrow();
+  });
+});

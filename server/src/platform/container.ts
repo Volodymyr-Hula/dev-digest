@@ -34,6 +34,10 @@ import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
 import { type Tokenizer, TiktokenTokenizer } from '../adapters/tokenizer/index.js';
 import { HttpRemoteFetcher } from '../adapters/http/index.js';
 import type { RemoteFetcher } from '../modules/skills/types.js';
+import type { IntentResolver } from '../modules/intent/types.js';
+import { IntentRepository } from '../modules/intent/repository.js';
+import { IntentService } from '../modules/intent/service.js';
+import { SmartDiffService } from '../modules/smart-diff/service.js';
 
 /**
  * DI container. One per app instance. Holds config, db, the JobRunner,
@@ -58,6 +62,8 @@ export interface ContainerOverrides {
   tokenizer?: Tokenizer;
   /** Outbound fetch of a user-supplied URL (skill import). */
   fetcher?: RemoteFetcher;
+  /** PR-intent resolver the review executor calls — tests inject a fake. */
+  intent?: IntentResolver;
 }
 
 export class Container {
@@ -84,6 +90,8 @@ export class Container {
   private _tokenizer?: Tokenizer;
   private _priceBook?: PriceBook;
   private _fetcher?: RemoteFetcher;
+  private _intent?: IntentService;
+  private _smartDiff?: SmartDiffService;
 
   constructor(config: AppConfig, db: Db, private overrides: ContainerOverrides = {}) {
     this.config = config;
@@ -133,6 +141,33 @@ export class Container {
     return this._repoIntel;
   }
 
+  /**
+   * What the review executor asks for a PR's intent. Override-first like the
+   * other getters; otherwise the one real service (so an in-flight derivation
+   * is shared with the `/pulls/:id/intent` routes).
+   */
+  get intent(): IntentResolver {
+    return this.overrides.intent ?? this.intentService;
+  }
+
+  /** The real PR-intent service: lazy, cached, narrow deps (adapters resolved at use time). */
+  get intentService(): IntentService {
+    this._intent ??= new IntentService({
+      repo: new IntentRepository(this.db),
+      github: () => this.github(),
+      git: () => this.git,
+      llm: (provider) => this.llm(provider),
+      resolveModel: (workspaceId) => this.resolveFeatureModel(workspaceId, 'review_intent'),
+    });
+    return this._intent;
+  }
+
+  /** The smart-diff service: lazy, cached, narrow deps (no adapters, no LLM). */
+  get smartDiffService(): SmartDiffService {
+    this._smartDiff ??= new SmartDiffService({ repo: this.reviewRepo });
+    return this._smartDiff;
+  }
+
   /** Import-graph builder (dependency-cruiser). T3 indexer pipeline only. */
   get depgraph(): DepGraph {
     if (this.overrides.depgraph) return this.overrides.depgraph;
@@ -169,6 +204,7 @@ export class Container {
   async github(): Promise<GitHubClient> {
     if (this.overrides.github) return this.overrides.github;
     if (this._github) return this._github;
+    this.assertNoRealAdapterInTest('GitHub client');
     const token = await this.secrets.get('GITHUB_TOKEN');
     if (!token) throw new ConfigError('GITHUB_TOKEN is not configured');
     this._github = new OctokitGitHubClient(token);
@@ -190,6 +226,7 @@ export class Container {
     if (injected) return injected;
     const cached = this.llmCache.get(id);
     if (cached) return cached;
+    this.assertNoRealAdapterInTest(`${id} provider`);
     const provider = await this.buildLlm(id);
     this.llmCache.set(id, provider);
     return provider;
@@ -210,6 +247,20 @@ export class Container {
   /** S11 — a GitHub client for a candidate token, not persisted or cached. */
   githubWithToken(token: string): GitHubClient {
     return this.overrides.github ?? new OctokitGitHubClient(token);
+  }
+
+  /**
+   * Under NODE_ENV=test a real network adapter is never built from the
+   * developer's own keys (`~/.devdigest/secrets.json`, process.env): a test that
+   * needs one injects a mock through `ContainerOverrides`. Without this, any
+   * feature that quietly calls an LLM or GitHub (e.g. PR-intent pre-work in a
+   * review) would hit the real service on a machine that has keys, and CI
+   * (no keys) and local runs would disagree.
+   */
+  private assertNoRealAdapterInTest(what: string): void {
+    if (this.config.nodeEnv === 'test') {
+      throw new ConfigError(`${what} is not injected (NODE_ENV=test never builds a real adapter)`);
+    }
   }
 
   private async buildLlm(

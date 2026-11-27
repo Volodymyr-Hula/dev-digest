@@ -29,6 +29,8 @@ export const agentRuns = pgTable('agent_runs', {
   score: integer('score'),
   /** Findings that tripped the agent's gate (severity ≥ ciFailOn). */
   blockers: integer('blockers'),
+  /** 'review' = an agent review run; 'intent' = the PR-intent classifier call (agent_id null). */
+  kind: text('kind', { enum: ['review', 'intent'] }).notNull().default('review'),
 });
 
 /** Whole trace of one run as a SINGLE jsonb document. */

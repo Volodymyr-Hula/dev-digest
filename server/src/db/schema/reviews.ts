@@ -3,6 +3,7 @@ import { pgTable, uuid, text, integer, jsonb, timestamp, doublePrecision } from 
 import { now } from './_shared';
 import { workspaces } from './core';
 import { pullRequests } from './pulls';
+import type { IntentSource } from '../../vendor/shared/contracts/brief';
 
 // ============================================================ Review & findings
 
@@ -52,6 +53,20 @@ export const prIntent = pgTable('pr_intent', {
   intent: text('intent').notNull(),
   inScope: jsonb('in_scope').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   outOfScope: jsonb('out_of_scope').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  intentClass: text('intent_class').notNull().default('unknown'),
+  rationale: text('rationale'),
+  /** high | medium | low — computed from the sources, never from the model. */
+  confidence: text('confidence').notNull().default('low'),
+  sources: jsonb('sources').$type<IntentSource[]>().notNull().default(sql`'[]'::jsonb`),
+  /** Who wrote the row: the classifier ('model') or a human override ('user'). */
+  source: text('source', { enum: ['model', 'user'] }).notNull().default('model'),
+  headSha: text('head_sha'),
+  inputHash: text('input_hash'),
+  provider: text('provider'),
+  model: text('model'),
+  /** The agent_run (kind='intent') that produced this row; no FK, like reviews.run_id. */
+  runId: uuid('run_id'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const prBrief = pgTable('pr_brief', {

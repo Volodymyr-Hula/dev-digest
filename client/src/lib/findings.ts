@@ -1,5 +1,5 @@
 /* Finding helpers shared by the PR list, the PR timeline and the findings panel. */
-import type { FindingRecord, Severity, SeverityCounts } from "@devdigest/shared";
+import type { FindingRecord, ReviewRecord, Severity, SeverityCounts } from "@devdigest/shared";
 
 /** Display order of the severity levels (most severe first). */
 export const SEVERITIES: readonly Severity[] = ["CRITICAL", "WARNING", "SUGGESTION"];
@@ -49,4 +49,26 @@ export function sortBySeverity<T extends Pick<FindingRecord, "severity">>(findin
 /** Format a finding's line range ("11" when single-line, else "11-15"). */
 export function lineLabel(f: Pick<FindingRecord, "start_line" | "end_line">): string {
   return f.start_line === f.end_line ? `${f.start_line}` : `${f.start_line}-${f.end_line}`;
+}
+
+/**
+ * Findings of the latest review per agent (the smart-diff rule): only
+ * `kind === "review"` records, one bucket per `agent_id` (all `null` ids share
+ * one), the newest `created_at` wins, a tie goes to the greater `id`. Accepted
+ * and dismissed findings stay. Mirrors the server's `selectLatestReviewPerAgent`.
+ */
+export function selectLatestFindings(reviews: readonly ReviewRecord[]): FindingRecord[] {
+  const latest = new Map<string | null, ReviewRecord>();
+  for (const r of reviews) {
+    if (r.kind !== "review") continue;
+    const key = r.agent_id ?? null;
+    const cur = latest.get(key);
+    if (!cur) {
+      latest.set(key, r);
+      continue;
+    }
+    const diff = Date.parse(r.created_at) - Date.parse(cur.created_at);
+    if (diff > 0 || (diff === 0 && r.id > cur.id)) latest.set(key, r);
+  }
+  return [...latest.values()].flatMap((r) => r.findings);
 }

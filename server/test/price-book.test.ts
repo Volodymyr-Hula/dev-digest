@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ModelInfo } from '@devdigest/shared';
 import { PriceBook } from '../src/platform/price-book.js';
+import { estimateCost } from '../src/adapters/llm/pricing.js';
 
 const MODELS: ModelInfo[] = [
   {
@@ -42,5 +43,17 @@ describe('PriceBook (live OpenRouter pricing for cost attribution)', () => {
     );
     await pb.refresh(); // swallows the error
     expect(pb.estimate('deepseek/deepseek-v4-flash', 0, 0)).toBe(0.5);
+  });
+});
+
+describe('static price table: claude-haiku-5-5', () => {
+  it('prices $0.10 in / $0.50 out per 1M tokens', () => {
+    expect(estimateCost('claude-haiku-5-5', 1_000_000, 1_000_000)).toBeCloseTo(0.6, 10);
+    expect(estimateCost('claude-haiku-5-5', 1_000_000, 0)).toBeCloseTo(0.1, 10);
+    expect(estimateCost('claude-haiku-5-5', 0, 1_000_000)).toBeCloseTo(0.5, 10);
+  });
+
+  it('still returns null for an unknown model', () => {
+    expect(estimateCost('claude-haiku-9-9', 1000, 1000)).toBeNull();
   });
 });
