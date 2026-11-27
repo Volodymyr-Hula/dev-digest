@@ -49,7 +49,14 @@ Exit codes: `0` all flows passed; `1` any flow failed, no flows found, or runner
 
 ## Why no model call happens
 
-Flows only read what `server/src/db/seed.ts` inserted: a repo, one PR, one pre-made review with two findings, three agents. They never click Run Review, submit the onboarding form, or use agent-browser's AI `chat` command, and locators are `--url`/`--text`/`find`. The API also boots without keys: the CI header states `loadConfig()` marks every secret optional (`.github/workflows/e2e-web.yml:7-8`). Enforced as a rule in [../specs/flow-format.md](../specs/flow-format.md); fixture list in [../specs/seed-fixtures.md](../specs/seed-fixtures.md).
+Flows only read what `server/src/db/seed.ts` inserted: a repo, one PR, one pre-made review with two findings, one `pr_intent` row for that PR (`seed.ts`, "PR #482 intent": `source: 'model'`, medium confidence, an unfetched `PAY-482` ticket source), three agents. They never click Run Review, submit the onboarding form, or use agent-browser's AI `chat` command, and locators are `--url`/`--text`/`find`. The API also boots without keys: the CI header states `loadConfig()` marks every secret optional (`.github/workflows/e2e-web.yml:7-8`). Enforced as a rule in [../specs/flow-format.md](../specs/flow-format.md); fixture list in [../specs/seed-fixtures.md](../specs/seed-fixtures.md).
+
+## Flow-authoring notes (from `flows/09-pr-intent.flow.json`)
+
+- **`09-pr-intent` depends on the seeded intent.** It opens PR #482, expects the seeded summary, "Medium confidence" and the `PAY-482` source with "not fetched" on the Overview tab, then edits the summary and saves through `PUT /pulls/:id/intent` (no model call). Because it saves a user intent ("High confidence", "user" marker), it assumes a freshly seeded DB.
+- **Scroll an off-screen control into view first.** The PR page scrolls inside an inner container, so a click on a control outside the viewport lands at off-viewport coordinates; the flow adds a `scrollintoview <css>` step before clicking Save (`flows/09-pr-intent.flow.json:17`). `scroll down` scrolls the window, not that container, and does not help.
+- **`find label X fill` needs a real `<label>`.** It only resolves controls inside or associated with a `<label>`; that is why `IntentEditForm` wraps each control in one (`client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/_components/IntentPanel/_components/IntentEditForm/IntentEditForm.tsx`).
+- **Local runs may need agent-browser's Node on `PATH`.** If it was installed under another mise Node, `scripts/e2e.sh` only warns it is not found; see the `mise ERROR agent-browser is not provided by the active node` entry in root [INSIGHTS.md](../../INSIGHTS.md).
 
 ## CI (`.github/workflows/e2e-web.yml`)
 

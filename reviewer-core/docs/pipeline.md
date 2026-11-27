@@ -6,10 +6,10 @@ Deeper than the diagram in [../README.md](../README.md). Exact rules live in `sp
 
 ```mermaid
 flowchart TD
-  IN[ReviewInput] --> SEL{selectMode<br/>run.ts:115}
+  IN[ReviewInput] --> SEL{selectMode<br/>run.ts:118}
   SEL -->|single-pass| C1["1 chunk: whole diff.raw"]
   SEL -->|map-reduce| CN["N chunks: sliceDiff per file"]
-  C1 --> AP["assemblePrompt<br/>prompt.ts:85"]
+  C1 --> AP["assemblePrompt<br/>prompt.ts:99"]
   CN --> AP
   AP --> LLM["llm.completeStructured(Review schema)<br/>run.ts:174"]
   LLM --> RED["reduceReviews<br/>reduce.ts:43"]
@@ -22,17 +22,18 @@ The loop is sequential (`for … of chunks`, `run.ts:162`), one LLM call per chu
 
 ## Single-pass vs map-reduce
 
-Selection rules (`selectMode`): review-contract C6–C7. Why `auto` needs both a line threshold and more than one file: one huge file cannot be split by this engine (chunks are per file), so splitting would only add calls. Map-reduce trades more calls for a smaller prompt per call; each chunk gets the full shared context (skills, memory, specs, repo map, callers, PR description) and only its own file diff.
+Selection rules (`selectMode`): review-contract C6–C7. Why `auto` needs both a line threshold and more than one file: one huge file cannot be split by this engine (chunks are per file), so splitting would only add calls. Map-reduce trades more calls for a smaller prompt per call; each chunk gets the full shared context (skills, memory, specs, repo map, callers, PR description, PR intent) and only its own file diff.
 
 Trace nuance: `assembly` in the outcome is the single call's assembly in single-pass, but the whole-diff assembly in map-reduce (`run.ts:142`, `:173`); `chunks` lists the per-call labels (`'all files'` or file paths).
 
 ## Prompt assembly and the injection guard
 
-`assemblePrompt` (`prompt.ts:85`) always yields exactly two messages. Design: the **system** message is trusted, the **user** message carries data.
+`assemblePrompt` (`prompt.ts:99`) always yields exactly two messages. Design: the **system** message is trusted, the **user** message carries data.
 
 - `INJECTION_GUARD` is the **single shared defence**. It runs on every path (studio and CI) because both go through `reviewPullRequest`. It deliberately does not pattern-match untrusted text, because a denylist catches only one phrasing or language. Instead it tells the model that `<untrusted>` content is data and that intent claims never descope the review.
 - Fencing beats escaping. `wrapUntrusted` neutralises a literal closing tag inside the content, so a PR cannot close its own fence.
 - Skills and memory stay unwrapped because they are treated as curated. Sanitising community skills is the caller's job.
+- **PR intent** (`ReviewInput.intent`, `PromptParts.intent`): the caller (the server's intent module) renders why the PR exists (class, confidence, summary, scope, sources, linked-doc excerpts) into one string. `assemblePrompt` emits it as a `## PR intent` section right after `## PR description`, as a trusted `INTENT_PREAMBLE` line followed by `wrapUntrusted('pr-intent', …)` of the text truncated to `MAX_INTENT_CHARS` (8000). The content is untrusted because it is built from PR, issue and doc text, so it is fenced like the description. An empty or whitespace-only value omits the section and leaves the prompt unchanged. The wrapped block is also stored as `PromptAssembly.intent` (null when absent) for the run trace (`prompt.ts`; `PromptAssembly` in `server/src/vendor/shared/contracts/trace.ts:39`, field `:52`). The preamble and `INJECTION_GUARD` say intent only frames the review and never reduces what is reported.
 - Exact layout, order, wrapping and truncation: [../specs/prompt-and-structured-output.md](../specs/prompt-and-structured-output.md) P1–P9.
 
 Prompt text conventions (severity rubric, verdict mapping) are authored outside this package: [../../docs/agent-prompts/README.md](../../docs/agent-prompts/README.md).
@@ -62,4 +63,4 @@ Cost rules: review-contract C12 and prompt-and-structured-output S9.
 
 As TypeScript source, no build: `server/tsconfig.json:24-25` and `server/vitest.config.ts:8` alias `@devdigest/reviewer-core` to `../reviewer-core/src`. Types come the other way: `reviewer-core/tsconfig.json` aliases `@devdigest/shared` to `../server/src/vendor/shared` and `zod` to its own `node_modules`, keeping one zod instance for `instanceof` and schema compatibility. Install consequence: [../CLAUDE.md](../CLAUDE.md) Gotchas.
 
-The server's call sites are `server/src/modules/reviews/run-executor.ts:191` (`reviewPullRequest`, `countBlockers`) and `server/src/platform/container.ts:207` (`OpenRouterProvider` with a PriceBook-backed `estimateCost`). What the server does with the outcome: [server/specs/review-flow.md](../../server/specs/review-flow.md).
+The server's call sites are `server/src/modules/reviews/run-executor.ts:221` (`reviewPullRequest`, `countBlockers`; it passes `intent` only when the intent module returned one) and `server/src/platform/container.ts:273` (`OpenRouterProvider` with a PriceBook-backed `estimateCost`). What the server does with the outcome: [server/specs/review-flow.md](../../server/specs/review-flow.md).

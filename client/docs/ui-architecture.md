@@ -63,7 +63,7 @@ flowchart LR
 
 Rules the code follows:
 
-1. Components never call `fetch`; they use a hook from `src/lib/hooks/*` (barrel `hooks/index.ts` re-exports `core`, `agents`, `reviews`, `trace`, `repo-intel`).
+1. Components never call `fetch`; they use a hook from `src/lib/hooks/*` (barrel `hooks/index.ts` re-exports `core`, `agents`, `reviews`, `trace`, `repo-intel`, `skills`, `conventions`, `intent`).
 2. Hooks call `api.*` (`lib/api.ts:65`) which wraps `apiFetch`; failures are normalised to `ApiError` (see [api-client spec](../specs/api-client.md)).
 3. Pages consume `{data, isLoading, isError, error, refetch}` and map them to `Skeleton` / `ErrorState` / `EmptyState` from `@devdigest/ui` (details per route in the pages spec).
 4. Mutations write back through the cache, not through local state.
@@ -84,6 +84,7 @@ Rules the code follows:
 | `["pr-active-runs", prId]` | `usePrActiveRuns` reviews:28, polls 4 s while non-empty | page `invalidateActiveRuns` (after run start / run done) |
 | `["pr-comments", prId]` | `usePrComments` reviews:91 | `useCreatePrComment` (113) |
 | `["run-trace", runId]` | `useRunTrace` trace:12, `retry: false` | nothing |
+| `["pr-intent", prId]` | `usePrIntent` intent:12 (`GET /pulls/:id/intent`, never calls the LLM; `enabled` only with a `prId`) | `useUpdatePrIntent` (intent:25, `PUT`) and `useDerivePrIntent` (intent:33, `POST …/derive`) both `invalidateQueries` on success |
 | `["repo-intel-state", repoId]`, `["context", repoId]` | `repo-intel.ts`, `core.ts:123` | hooks exist but **no component uses them** (see Open items) |
 
 Keys are inline string tuples, not a central factory; keep a new key's first element unique and put `repoId`/`prId` second so prefix invalidation works.
@@ -98,10 +99,19 @@ Two complementary channels, both keyed on the server's `agent_runs` rows:
 - Note: `RunTraceDrawer` can stream too (`useRunEvents(running ? [runId] : [])`, `RunTraceDrawer.tsx:46`), but the PR page never passes `running`, so the drawer there always shows the persisted trace (`[number]/page.tsx:175-181`).
 - CSP `connect-src` allows only `'self'` + `API_BASE` (`next.config.mjs`), which covers both fetch and `EventSource`.
 
+## PR intent panel
+
+`OverviewTab` (`repos/[repoId]/pulls/[number]/_components/OverviewTab/OverviewTab.tsx`) now takes `prId` from the page and renders `IntentPanel` above the PR description. `IntentPanel` (`OverviewTab/_components/IntentPanel/IntentPanel.tsx`) reads `usePrIntent`, and writes with `useUpdatePrIntent` (user edit, `PUT`) and `useDerivePrIntent` ("Derive now" / re-derive, `POST`); mutation errors are toasted by the global `MutationCache.onError`, so the panel adds no local toast and keeps the edit form open when a save fails. States: loading skeleton, `ErrorState` with retry, an empty state with "Derive now" when the API returns `intent: null`, and the filled panel (class and confidence badges, a "user" marker for `source === 'user'`, a "stale" marker when `stale`, a low-confidence notice, summary, rationale, in/out-of-scope lists, sources, the model that derived it). Confidence comes from the server, not the model. Its children live in its own `_components/`:
+
+- `IntentEditForm` — inline editor (class select, summary, scope lists); each control sits inside a real `<label>`, which the e2e flow relies on (see [../../e2e/docs/architecture.md](../../e2e/docs/architecture.md)).
+- `IntentSources` — one row per source: kind, ref, status (icon + label), doc version, role, and a hint for `not_found` / `referenced_not_fetched` / `skipped_pull_request`.
+
+Strings are in the `prIntent` messages namespace (`messages/en/prIntent.json`, registered in `src/test/intl.tsx` for tests). The `review_intent` entry of the client-local `FEATURE_MODELS` mirror (`src/lib/feature-models.ts`) is labelled "PR Intent (classifier)" with default `openrouter` / `deepseek/deepseek-v4-flash`, matching `FEATURE_MODELS` in `server/src/vendor/shared/contracts/platform.ts:53-58`; keep the two in sync.
+
 ## Internationalisation (next-intl)
 
 - Single locale `en`, **no locale routing** (`i18n/request.ts:14,27-30`); plugin registered in `next.config.mjs` (`createNextIntlPlugin("./src/i18n/request.ts")`).
-- Messages: one JSON per namespace in `messages/en/<ns>.json` (18 files). `loadMessages` reads the directory and merges to `{ <ns>: {...} }` (`request.ts:19-25`), so a feature adds a namespace without touching shared code.
+- Messages: one JSON per namespace in `messages/en/<ns>.json` (20 files). `loadMessages` reads the directory and merges to `{ <ns>: {...} }` (`request.ts:19-25`), so a feature adds a namespace without touching shared code.
 - Use `useTranslations("<ns>")` in client code (used across `app/` and `components/`); `getLocale/getMessages` only in the layout.
 - Adoption is **partial**: lists, agents list/editor tabs, settings, run status/trace use messages; `/`, `/onboarding`, `/agents/:id` page chrome, the PR detail page and its header/tabs, `OverviewTab`, `DiffTab`, `FindingsTab`, `ReviewRunAccordion` still contain literal English. Several namespaces (`blast`, `brief`, `ci`, `eval`, `memory`, …) are for screens not in this starter. `validation` holds the shared inline form-validation messages (pattern: [specs/pages.md → Forms](../specs/pages.md#forms--inline-validation)). New user-facing strings must go to messages (see [../CLAUDE.md](../CLAUDE.md) conventions).
 
