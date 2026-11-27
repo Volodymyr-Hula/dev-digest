@@ -37,6 +37,7 @@ import type { RemoteFetcher } from '../modules/skills/types.js';
 import type { IntentResolver } from '../modules/intent/types.js';
 import { IntentRepository } from '../modules/intent/repository.js';
 import { IntentService } from '../modules/intent/service.js';
+import { SmartDiffService } from '../modules/smart-diff/service.js';
 
 /**
  * DI container. One per app instance. Holds config, db, the JobRunner,
@@ -90,6 +91,7 @@ export class Container {
   private _priceBook?: PriceBook;
   private _fetcher?: RemoteFetcher;
   private _intent?: IntentService;
+  private _smartDiff?: SmartDiffService;
 
   constructor(config: AppConfig, db: Db, private overrides: ContainerOverrides = {}) {
     this.config = config;
@@ -158,6 +160,12 @@ export class Container {
       resolveModel: (workspaceId) => this.resolveFeatureModel(workspaceId, 'review_intent'),
     });
     return this._intent;
+  }
+
+  /** The smart-diff service: lazy, cached, narrow deps (no adapters, no LLM). */
+  get smartDiffService(): SmartDiffService {
+    this._smartDiff ??= new SmartDiffService({ repo: this.reviewRepo });
+    return this._smartDiff;
   }
 
   /** Import-graph builder (dependency-cruiser). T3 indexer pipeline only. */

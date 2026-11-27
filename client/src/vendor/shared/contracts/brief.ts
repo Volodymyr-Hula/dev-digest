@@ -13,7 +13,7 @@ export const Intent = z.object({
 });
 export type Intent = z.infer<typeof Intent>;
 
-// ---- PR intent layer (why a PR exists; fed to the reviewer prompt) ----
+// ---- PR intent layer (why a PR exists; feeds the reviewer prompt) ----
 export const IntentClass = z.enum([
   'feature',
   'bugfix',
@@ -30,7 +30,6 @@ export const IntentClass = z.enum([
 ]);
 export type IntentClass = z.infer<typeof IntentClass>;
 
-/** Computed by code from which sources were present — never taken from the model. */
 export const IntentConfidence = z.enum(['high', 'medium', 'low']);
 export type IntentConfidence = z.infer<typeof IntentConfidence>;
 
@@ -60,7 +59,11 @@ export const IntentSource = z.object({
 });
 export type IntentSource = z.infer<typeof IntentSource>;
 
-/** Classifier (LLM) output. No min/max constraints (strict json_schema); no confidence. */
+/**
+ * Classifier LLM output. No min/max/length constraints (strict json_schema
+ * compatibility; caps are applied in code) and no confidence field
+ * (confidence is computed from the sources, never taken from the model).
+ */
 export const IntentClassification = z.object({
   intent_class: IntentClass,
   summary: z.string(),
@@ -87,7 +90,6 @@ export const PrIntent = Intent.extend({
 });
 export type PrIntent = z.infer<typeof PrIntent>;
 
-/** User override body (PUT /pulls/:id/intent). */
 export const PrIntentUpdate = z.object({
   intent_class: IntentClass,
   intent: z.string().min(1).max(600),
@@ -164,7 +166,7 @@ export const PrHistory = z.object({
 export type PrHistory = z.infer<typeof PrHistory>;
 
 // ---- Smart Diff ----
-export const SmartDiffRole = z.enum(['core', 'wiring', 'boilerplate']);
+export const SmartDiffRole = z.enum(['core', 'tests', 'wiring', 'docs', 'boilerplate']);
 export type SmartDiffRole = z.infer<typeof SmartDiffRole>;
 
 export const SmartDiffFile = z.object({

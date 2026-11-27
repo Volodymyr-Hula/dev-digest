@@ -12,7 +12,11 @@ export interface Step {
   /** Human label for logs (defaults to the joined cmd). */
   label?: string;
   /** Optional extra check on the command's stdout (beyond its exit code). */
-  assert?: { stdoutIncludes?: string };
+  assert?: {
+    stdoutIncludes?: string;
+    /** Every string must appear in stdout, each after the previous one (e.g. group order from `get text <selector>`). */
+    stdoutInOrder?: string[];
+  };
 }
 
 export interface Flow {
@@ -41,6 +45,17 @@ export function resolveArgs(cmd: string[], base: string): string[] {
 
 export function stdoutContains(stdout: string, needle: string): boolean {
   return stdout.includes(needle);
+}
+
+/** True when each needle occurs in `stdout`, after the end of the previous one. */
+export function stdoutContainsInOrder(stdout: string, needles: string[]): boolean {
+  let from = 0;
+  for (const needle of needles) {
+    const at = stdout.indexOf(needle, from);
+    if (at < 0) return false;
+    from = at + needle.length;
+  }
+  return true;
 }
 
 export function summarize(results: FlowResult[]): string {

@@ -117,12 +117,73 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
       })
       .returning();
 
-    // pr_files (subset)
+    // pr_files (subset). One file per smart-diff role; src/config.ts carries a
+    // hunk whose new line 12 is the seeded CRITICAL finding, src/api/users.ts a
+    // hunk that does not reach line 45 (so its finding is off-patch).
+    const configPatch = [
+      '@@ -9,3 +9,7 @@',
+      ' export const config = {',
+      '   port: Number(process.env.PORT ?? 3000),',
+      '+  // rate limiting',
+      "+  stripeKey: 'sk_live_xxxxxxxxxxxxxxxx',",
+      '+  rateLimitMax: 100,',
+      '+  rateLimitWindowMs: 60_000,',
+      ' };',
+    ].join('\n');
+    const usersPatch = [
+      '@@ -10,6 +10,11 @@',
+      ' export async function listUsers(db: Db) {',
+      '-  const rows = await db.select().from(users);',
+      '-  return rows;',
+      '+  const rows = await db.select().from(users);',
+      '+  const limited = rows.slice(0, 100);',
+      '+  return limited.map(toDto);',
+      '+}',
+      '+',
+      '+function toDto(row: UserRow) {',
+      '+  return { id: row.id, name: row.name };',
+      ' }',
+      ' ',
+      ' export const usersRoute = "/users";',
+    ].join('\n');
     await db.insert(t.prFiles).values([
       { prId: pr!.id, path: 'src/middleware/ratelimit.ts', additions: 84, deletions: 0 },
       { prId: pr!.id, path: 'src/api/public/webhooks.ts', additions: 31, deletions: 6 },
-      { prId: pr!.id, path: 'src/config.ts', additions: 4, deletions: 0 },
-      { prId: pr!.id, path: 'src/api/users.ts', additions: 7, deletions: 2 },
+      { prId: pr!.id, path: 'src/config.ts', additions: 4, deletions: 0, patch: configPatch },
+      { prId: pr!.id, path: 'src/api/users.ts', additions: 7, deletions: 2, patch: usersPatch },
+      {
+        prId: pr!.id,
+        path: 'src/middleware/ratelimit.test.ts',
+        additions: 3,
+        deletions: 0,
+        patch: [
+          '@@ -0,0 +1,3 @@',
+          "+import { describe, it } from 'vitest';",
+          "+describe('ratelimit', () => {",
+          "+  it.todo('rejects the 101st request in a window');",
+        ].join('\n'),
+      },
+      {
+        prId: pr!.id,
+        path: '.env.example',
+        additions: 2,
+        deletions: 0,
+        patch: ['@@ -1,1 +1,3 @@', ' PORT=3000', '+RATE_LIMIT_MAX=100', '+RATE_LIMIT_WINDOW_MS=60000'].join('\n'),
+      },
+      {
+        prId: pr!.id,
+        path: 'docs/rate-limiting.md',
+        additions: 2,
+        deletions: 0,
+        patch: ['@@ -0,0 +1,2 @@', '+# Rate limiting', '+Public endpoints allow 100 requests per minute per client.'].join('\n'),
+      },
+      {
+        prId: pr!.id,
+        path: 'pnpm-lock.yaml',
+        additions: 2,
+        deletions: 1,
+        patch: ['@@ -10,2 +10,3 @@', ' lockfileVersion: 9', '-  bucket: 1.0.0', '+  bucket: 1.1.0', '+  limiter: 2.0.0'].join('\n'),
+      },
     ]);
 
     // pr_commits
