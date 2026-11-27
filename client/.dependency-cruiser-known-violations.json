@@ -1,0 +1,735 @@
+[
+  {
+    "type": "dependency",
+    "from": "src/app/agents/_components/AgentCard/AgentCard.test.tsx",
+    "to": "messages/en/agents.json",
+    "unresolvedTo": "../../../../../messages/en/agents.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/agents/_components/AgentCard/AgentCard.tsx",
+    "to": "src/lib/hooks/agents.ts",
+    "unresolvedTo": "../../../../lib/hooks/agents",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/agents/_components/AgentsListView/AgentsListView.tsx",
+    "to": "src/components/app-shell/index.ts",
+    "unresolvedTo": "../../../../components/app-shell",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/agents/_components/AgentsListView/AgentsListView.tsx",
+    "to": "src/lib/hooks/agents.ts",
+    "unresolvedTo": "../../../../lib/hooks/agents",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/agents/[id]/_components/AgentEditor/AgentEditor.test.tsx",
+    "to": "src/lib/toast.tsx",
+    "unresolvedTo": "../../../../../lib/toast",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/_components/FilterBar/FilterBar.tsx",
+    "to": "src/app/repos/[repoId]/pulls/constants.ts",
+    "unresolvedTo": "../../constants",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/_components/FilterBar/FilterBar.tsx",
+    "to": "src/app/repos/[repoId]/pulls/styles.ts",
+    "unresolvedTo": "../../styles",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/_components/PRRow/PRRow.test.tsx",
+    "to": "messages/en/prReview.json",
+    "unresolvedTo": "../../../../../../../messages/en/prReview.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/_components/PRRow/PRRow.tsx",
+    "to": "src/app/repos/[repoId]/pulls/constants.ts",
+    "unresolvedTo": "../../constants",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/_components/PRRow/PRRow.tsx",
+    "to": "src/app/repos/[repoId]/pulls/helpers.ts",
+    "unresolvedTo": "../../helpers",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/_components/PRRow/PRRow.tsx",
+    "to": "src/app/repos/[repoId]/pulls/styles.ts",
+    "unresolvedTo": "../../styles",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/FindingCard/FindingCard.test.tsx",
+    "to": "messages/en/prReview.json",
+    "unresolvedTo": "../../../../../../../../messages/en/prReview.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/FindingCard/FindingCard.tsx",
+    "to": "src/lib/github-urls.ts",
+    "unresolvedTo": "../../../../../../../lib/github-urls",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/FindingsPanel/FindingsPanel.test.tsx",
+    "to": "messages/en/prReview.json",
+    "unresolvedTo": "../../../../../../../../messages/en/prReview.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/FindingsPanel/FindingsPanel.tsx",
+    "to": "src/lib/hooks/reviews.ts",
+    "unresolvedTo": "../../../../../../../lib/hooks/reviews",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/FindingsTab/FindingsTab.test.tsx",
+    "to": "messages/en/prReview.json",
+    "unresolvedTo": "../../../../../../../../messages/en/prReview.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/ReviewRunAccordion/ReviewRunAccordion.tsx",
+    "to": "src/lib/hooks/reviews.ts",
+    "unresolvedTo": "../../../../../../../lib/hooks/reviews",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunHistory/RunHistory.test.tsx",
+    "to": "messages/en/prReview.json",
+    "unresolvedTo": "../../../../../../../../messages/en/prReview.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunReviewDropdown/RunReviewDropdown.test.tsx",
+    "to": "messages/en/prReview.json",
+    "unresolvedTo": "../../../../../../../../messages/en/prReview.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunReviewDropdown/RunReviewDropdown.tsx",
+    "to": "src/lib/hooks/agents.ts",
+    "unresolvedTo": "../../../../../../../lib/hooks/agents",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunReviewDropdown/RunReviewDropdown.tsx",
+    "to": "src/lib/hooks/reviews.ts",
+    "unresolvedTo": "../../../../../../../lib/hooks/reviews",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunStatus/RunStatus.test.tsx",
+    "to": "messages/en/prReview.json",
+    "unresolvedTo": "../../../../../../../../messages/en/prReview.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunStatus/RunStatus.tsx",
+    "to": "src/lib/hooks/reviews.ts",
+    "unresolvedTo": "../../../../../../../lib/hooks/reviews",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/_components/FindingsSection/FindingsSection.tsx",
+    "to": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/styles.ts",
+    "unresolvedTo": "../../styles",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/_components/PromptBlock/PromptBlock.tsx",
+    "to": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/styles.ts",
+    "unresolvedTo": "../../styles",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/_components/ToolCallRow/ToolCallRow.tsx",
+    "to": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/styles.ts",
+    "unresolvedTo": "../../styles",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/_components/TraceBody/TraceBody.tsx",
+    "to": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/constants.ts",
+    "unresolvedTo": "../../constants",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/_components/TraceBody/TraceBody.tsx",
+    "to": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/helpers.ts",
+    "unresolvedTo": "../../helpers",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/_components/TraceBody/TraceBody.tsx",
+    "to": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/styles.ts",
+    "unresolvedTo": "../../styles",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/_components/TraceSection/TraceSection.tsx",
+    "to": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/styles.ts",
+    "unresolvedTo": "../../styles",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/RunTraceDrawer.test.tsx",
+    "to": "messages/en/runs.json",
+    "unresolvedTo": "../../../../../../../../messages/en/runs.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/repos/[repoId]/pulls/[number]/_components/VerdictBanner/VerdictBanner.test.tsx",
+    "to": "messages/en/prReview.json",
+    "unresolvedTo": "../../../../../../../../messages/en/prReview.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/_components/SettingsApiKeys/constants.ts",
+    "to": "src/lib/types.ts",
+    "unresolvedTo": "../../../../../../../lib/types",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/_components/SettingsApiKeys/SettingsApiKeys.test.tsx",
+    "to": "messages/en/settings.json",
+    "unresolvedTo": "../../../../../../../../messages/en/settings.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/_components/SettingsApiKeys/SettingsApiKeys.tsx",
+    "to": "src/lib/api.ts",
+    "unresolvedTo": "../../../../../../../lib/api",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/_components/SettingsApiKeys/SettingsApiKeys.tsx",
+    "to": "src/lib/hooks/index.ts",
+    "unresolvedTo": "../../../../../../../lib/hooks",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/_components/SettingsApiKeys/SettingsApiKeys.tsx",
+    "to": "src/lib/types.ts",
+    "unresolvedTo": "../../../../../../../lib/types",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/_components/SettingsModels/SettingsModels.tsx",
+    "to": "src/lib/feature-models.ts",
+    "unresolvedTo": "../../../../../../../lib/feature-models",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/_components/SettingsModels/SettingsModels.tsx",
+    "to": "src/lib/hooks/agents.ts",
+    "unresolvedTo": "../../../../../../../lib/hooks/agents",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/_components/SettingsModels/SettingsModels.tsx",
+    "to": "src/lib/hooks/index.ts",
+    "unresolvedTo": "../../../../../../../lib/hooks",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/_components/SettingsModels/SettingsModels.tsx",
+    "to": "src/lib/model-label.ts",
+    "unresolvedTo": "../../../../../../../lib/model-label",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/_components/SettingsModels/SettingsModels.tsx",
+    "to": "src/lib/types.ts",
+    "unresolvedTo": "../../../../../../../lib/types",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/app/settings/[section]/_components/SettingsView/SettingsView.tsx",
+    "to": "src/components/app-shell/index.ts",
+    "unresolvedTo": "../../../../../components/app-shell",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/app-shell/helpers.ts",
+    "to": "src/lib/types.ts",
+    "unresolvedTo": "../../lib/types",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/app-shell/hooks/useGlobalShortcuts.ts",
+    "to": "src/lib/repo-context.tsx",
+    "unresolvedTo": "../../../lib/repo-context",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/app-shell/hooks/useShellCommands.ts",
+    "to": "src/lib/repo-context.tsx",
+    "unresolvedTo": "../../../lib/repo-context",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/app-shell/hooks/useShellCommands.ts",
+    "to": "src/lib/theme.tsx",
+    "unresolvedTo": "../../../lib/theme",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/app-shell/hooks/useShellContext.ts",
+    "to": "src/lib/hooks/index.ts",
+    "unresolvedTo": "../../../lib/hooks",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/app-shell/hooks/useShellContext.ts",
+    "to": "src/lib/repo-context.tsx",
+    "unresolvedTo": "../../../lib/repo-context",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/app-shell/hooks/useShellContext.ts",
+    "to": "src/lib/theme.tsx",
+    "unresolvedTo": "../../../lib/theme",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/diff-viewer/comments.ts",
+    "to": "src/lib/types.ts",
+    "unresolvedTo": "../../lib/types",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/severity-counts/SeverityCounts.test.tsx",
+    "to": "messages/en/prReview.json",
+    "unresolvedTo": "../../../messages/en/prReview.json",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-climb-out-of-component-folder"
+    }
+  }
+]
