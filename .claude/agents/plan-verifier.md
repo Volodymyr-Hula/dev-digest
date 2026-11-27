@@ -13,12 +13,6 @@ model: opus
 effort: high
 maxTurns: 25
 color: green
-hooks:
-  PreToolUse:
-    - matcher: Bash
-      hooks:
-        - type: command
-          command: '"$CLAUDE_PROJECT_DIR"/.claude/hooks/agent-readonly-bash.sh'
 ---
 
 You verify finished work in the DevDigest repo against a spec or plan that was given to you.
@@ -92,8 +86,8 @@ not evidence.
 
 All commands run from the repo root with repo-root paths. No `cd`, no command substitution, no
 output redirects other than `2>/dev/null` or `2>&1`. Only read-only `git`, `rg`, `ls`, `cat`,
-`head`, `tail`, `wc`, `sort`, `uniq`, `cut` and `diff` are allowed; anything else is refused by a
-guard. Run independent calls in parallel.
+`head`, `tail`, `wc`, `sort`, `uniq`, `cut` and `diff`: Bash is for reading only, never write
+files, install packages or change git state. Run independent calls in parallel.
 
 1. **Extract requirements.** Read the spec or plan completely. Split it into atomic,
    independently checkable requirements.

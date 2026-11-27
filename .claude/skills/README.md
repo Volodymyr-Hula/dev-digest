@@ -29,7 +29,7 @@ Project subagents live in `.claude/agents/`.
 | Agent | Model | Description |
 |-------|-------|-------------|
 | [researcher](../agents/researcher.md) | sonnet | Read-only research of the codebase and the web; every finding cites `file:line` or a fetched URL + section |
-| [planner](../agents/planner.md) | opus | Writes a grounded spec + ordered plan for one task to `<module>/specs/<slug>.md` (root `specs/` when 2+ modules); writes are limited by `.claude/hooks/agent-spec-write.sh` |
+| [planner](../agents/planner.md) | opus | Writes a grounded spec + ordered plan for one task to `<module>/specs/<slug>.md` (root `specs/` when 2+ modules) |
 | [brainstorm](../agents/brainstorm.md) | opus | Read-only option comparison before implementation: distinct options incl. baseline, must-have gates, reasoned scores, verdict + premortem |
 | [architecture-reviewer](../agents/architecture-reviewer.md) | opus | Read-only review of local changes for layer boundaries, coupling, leaking abstractions; backed by the onion greps and `server/`/`client/` `.dependency-cruiser.cjs`; CLEAN/ISSUES |
 | [security-reviewer](../agents/security-reviewer.md) | opus | Read-only, no-network audit of local changes for exploitable issues (source→sink, deployment-adjusted severity, confidence ≥0.8); preloads `security`; PASS/BLOCK |
@@ -38,7 +38,7 @@ Project subagents live in `.claude/agents/`.
 | [test-writer](../agents/test-writer.md) | sonnet | Writes tests only (colocated client tests, `server/test/`, `reviewer-core/test/`, e2e flows + their coverage/seed-fixture rows), runs them (incl. `./scripts/e2e.sh`); a test exposing a real bug stays red and is reported |
 | [doc-writer](../agents/doc-writer.md) | sonnet | Updates Markdown under the five `docs/` folders (never `docs/agent-prompts/`), every statement grounded in code read in the run; reports stale text outside its scope |
 
-Bash is limited by `.claude/hooks/agent-readonly-bash.sh`: read-only commands for the reviewer/verifier agents and `doc-writer`; the `checks` extra adds the exact typecheck/test forms (`pnpm -C <server|client> …`, `npm --prefix <reviewer-core|e2e> …`, never `add`/`install`) for `implementer` and `test-writer`, and `e2e` adds `./scripts/e2e.sh` for `test-writer`. Writes of the three writer agents are path-scoped by `.claude/hooks/agent-write-scope.sh <profile>`. The agent's `permissionMode` is not relied on: it inherits the session's auto mode. Tests: `bash .claude/hooks/test/*.test.sh`. Every agent is independent — none calls another (`Agent` and `Skill` are disallowed; skills come only via `skills:` preload) or needs another's output as input.
+Scopes (which paths an agent may write, read-only Bash for reviewers) are instructions in each agent file, not enforced by hooks: the PreToolUse guard hooks were removed on 2026-11-27 because they cost more turns than they prevented (see root `INSIGHTS.md`). The agent's `permissionMode` is not relied on: it inherits the session's auto mode. Every agent is independent — none calls another (`Agent` and `Skill` are disallowed; skills come only via `skills:` preload) or needs another's output as input.
 
 ## What Are Skills?
 
