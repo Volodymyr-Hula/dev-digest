@@ -16,6 +16,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Tool & Library Notes
 <!-- dependency quirks, version-specific behaviour, CLI gotchas -->
+- **Select vitest files under Next route folders by a plain substring (`vitest run page.test`)** — vitest's CLI filter is a substring match, so regex/glob-looking filters with `[repoId]`/`[number]` match nothing (`No test files found, exiting with code 1`). Evidence: `client/src/app/repos/[repoId]/pulls/[number]/page.test.tsx`. (2026-11-27)
 - **Restart the developer's `pnpm dev` (client) after running `./scripts/e2e.sh`** — e2e starts a second `next dev` in the same `client/` folder with `NEXT_PUBLIC_API_BASE=http://localhost:3101` (`scripts/e2e.sh:42,148`), and both share `client/.next`, so afterwards the dev web app on :13000 calls the e2e API (`Connecting to 'http://localhost:3101/repos' violates the following Content Security Policy directive`) and returned 404 for an existing `/skills/[id]` page. Evidence: browser console on :13000 right after an e2e run. (2026-11-24)
 - **If `agent-browser` fails with `mise ERROR agent-browser is not provided by the active node@…`, run e2e with that node's bin on PATH** — it was installed globally under another mise Node, so `scripts/e2e.sh` only warns `agent-browser not found` and every flow fails. Fix: `PATH="$HOME/.local/share/mise/installs/node/<version>/bin:$PATH" ./scripts/e2e.sh` (the version is named in the error), or `npm i -g agent-browser` for the active Node. Evidence: `scripts/e2e.sh:51-52`. (2026-11-24)
 - **Plan a Claude Code session restart before smoke-testing a newly added `.claude/agents/*.md`** — live loading is unreliable: 5 agents added 2026-11-26 into an existing folder showed up without a restart, but `implementer`/`test-writer`/`doc-writer` added 2026-11-27 into the same existing folder (valid YAML frontmatter) failed with `Agent type 'implementer' not found. Available agents: architecture-reviewer, …`, as did agents created together with the folder. Run the agent itself after the restart. Evidence: Agent tool errors for `client-reviewer.md` (2026-11-23), `researcher.md` (2026-11-26), `implementer.md` (2026-11-27). (2026-11-23, 2026-11-26, 2026-11-27)
@@ -35,6 +36,7 @@ Maintained via the `engineering-insights` skill (`.claude/skills/engineering-ins
 
 ## Session Notes
 <!-- one dated line per session that produced an entry above -->
+- 2026-11-27 — Smart Diff (planner → implementer → test-writer → architecture-reviewer ∥ plan-verifier) → vitest substring filter.
 - 2026-11-27 — intent layer via implementer/test-writer subagents in a worktree → agent guard hooks removed (cost turns, blocked nothing harmful).
 - 2026-11-27 — implementer / test-writer / doc-writer agents + `agent-write-scope.sh` + `checks`/`e2e` Bash extras → write-scope enforcement rule; agent live-load entry corrected (restart needed); `npm --prefix … exec` cwd trap.
 - 2026-11-26 — 5 independent agents + guard hooks + depcruise configs → agent live-reload narrowed to new-folder case; depcruise cwd rule.
