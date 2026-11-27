@@ -1,8 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
 import type { FindingRecord } from "@devdigest/shared";
-import messages from "../../../../../../../../messages/en/prReview.json";
+import { IntlWrapper } from "@/test/intl";
 import { FindingCard } from "./FindingCard";
 
 afterEach(cleanup);
@@ -27,11 +26,7 @@ const FINDING: FindingRecord = {
 };
 
 function renderWithIntl(ui: React.ReactElement) {
-  return render(
-    <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
-      {ui}
-    </NextIntlClientProvider>,
-  );
+  return render(<IntlWrapper>{ui}</IntlWrapper>);
 }
 
 describe("FindingCard (smoke, both themes)", () => {

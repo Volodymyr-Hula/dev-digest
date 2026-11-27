@@ -15,7 +15,7 @@ All paths below are relative to `client/`. `<route>` is a folder under `src/app/
 | Adding | Path | Example in repo |
 |---|---|---|
 | Page (route) | `src/app/<segment>/page.tsx` — thin: params, data hooks, loading/error/empty switch, then render the view | `src/app/agents/page.tsx` |
-| Component used by one page | `<route>/_components/<Name>/<Name>.tsx` | `src/app/repos/[repoId]/pulls/[number]/_components/FindingCard/` |
+| Component used by one page | `<route>/_components/<Name>/<Name>.tsx` | `src/app/repos/[repoId]/pulls/[number]/_components/RunStatus/` |
 | Child of one component | `<Parent>/_components/<Child>/<Child>.tsx` | `AgentsListView/_components/CreateAgentModal/` |
 | Component used by 2+ pages | `src/components/<kebab-name>/<Name>.tsx` (+ `index.ts`) | `src/components/severity-counts/SeverityCounts.tsx` |
 | Hook that calls the API (TanStack Query) | `src/lib/hooks/<domain>.ts`, one domain per file; re-export from `src/lib/hooks/index.ts` | `src/lib/hooks/reviews.ts` |

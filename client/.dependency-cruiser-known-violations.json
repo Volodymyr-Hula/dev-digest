@@ -155,34 +155,6 @@
   },
   {
     "type": "dependency",
-    "from": "src/app/repos/[repoId]/pulls/[number]/_components/FindingCard/FindingCard.test.tsx",
-    "to": "messages/en/prReview.json",
-    "unresolvedTo": "../../../../../../../../messages/en/prReview.json",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-climb-out-of-component-folder"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/app/repos/[repoId]/pulls/[number]/_components/FindingCard/FindingCard.tsx",
-    "to": "src/lib/github-urls.ts",
-    "unresolvedTo": "../../../../../../../lib/github-urls",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-climb-out-of-component-folder"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/app/repos/[repoId]/pulls/[number]/_components/FindingsPanel/FindingsPanel.test.tsx",
     "to": "messages/en/prReview.json",
     "unresolvedTo": "../../../../../../../../messages/en/prReview.json",
