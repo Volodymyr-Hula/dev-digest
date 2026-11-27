@@ -1,0 +1,40 @@
+{
+  "name": "Smart diff: Files changed tab groups files by role, shows findings inline, and can return to the original order",
+  "description": "Open PR #482, switch to Files changed and confirm the Smart-order view: the five role groups in order, the seeded CRITICAL finding as an inline card with its 'blocker' label on src/config.ts, the off-patch N+1 finding in the end-of-file block, the boilerplate group collapsed until expanded, and the flat list after switching to Original order. Read-only seeded data; no Run Review, no Accept/Dismiss, no model call. Assumes a freshly seeded DB (see seed-fixtures.md).",
+  "steps": [
+    { "cmd": ["open", "{BASE}/"], "label": "load the app root" },
+    { "cmd": ["wait", "--url", "/pulls"], "label": "land on the PR list" },
+    { "cmd": ["wait", "--text", "Add rate limiting to public API endpoints"], "label": "seeded PR title row is visible" },
+    { "cmd": ["find", "text", "Add rate limiting to public API endpoints", "click"], "label": "open the PR row" },
+    { "cmd": ["wait", "--url", "/pulls/482"], "label": "navigate to the PR detail route" },
+    { "cmd": ["wait", "--load", "networkidle"], "label": "PR detail data settles" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Files changed"], "label": "switch to the Files changed tab" },
+    { "cmd": ["wait", "--url", "tab=diff"], "label": "diff tab is active in the URL" },
+    { "cmd": ["wait", "--text", "Reviewer-ordered diff"], "label": "the Smart-order header renders" },
+    { "cmd": ["wait", "--text", "Core"], "label": "Core group label renders" },
+    { "cmd": ["wait", "--text", "Tests"], "label": "Tests group label renders" },
+    { "cmd": ["wait", "--text", "Wiring"], "label": "Wiring group label renders" },
+    { "cmd": ["wait", "--text", "Docs"], "label": "Docs group label renders" },
+    { "cmd": ["wait", "--text", "Boilerplate"], "label": "Boilerplate group label renders" },
+    {
+      "cmd": ["get", "text", "[data-testid=\"smart-diff-groups\"]"],
+      "label": "the groups render in the order Core, Tests, Wiring, Docs, Boilerplate",
+      "assert": { "stdoutInOrder": ["Core", "Tests", "Wiring", "Docs", "Boilerplate"] }
+    },
+    {
+      "cmd": ["get", "text", "[data-testid=\"group-finding-count\"]"],
+      "label": "Core counts 2 files with findings (src/config.ts and src/api/users.ts)",
+      "assert": { "stdoutIncludes": "● 2" }
+    },
+    { "cmd": ["wait", "--text", "Hardcoded Stripe secret key in commit"], "label": "the seeded CRITICAL finding renders as an inline card on src/config.ts" },
+    { "cmd": ["wait", "--text", "blocker"], "label": "the finding's line carries the 'blocker' label" },
+    { "cmd": ["wait", "--text", "N+1 query in user list endpoint"], "label": "the off-patch finding on src/api/users.ts renders in the end-of-file block" },
+    { "cmd": ["scrollintoview", "[data-testid=\"smart-diff-groups\"] > div:last-child > button"], "label": "scroll the Boilerplate group header into view (the PR page scrolls inside an inner container, so an off-screen click is silently lost)" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Boilerplate"], "label": "expand the collapsed Boilerplate group" },
+    { "cmd": ["wait", "--text", "pnpm-lock.yaml"], "label": "the lock file appears once its group is expanded" },
+    { "cmd": ["scrollintoview", "button[aria-pressed=\"false\"]"], "label": "scroll the order toggle (Original order is the unpressed segment) back into view" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Original order"], "label": "switch to Original order" },
+    { "cmd": ["wait", "--text", "src/config.ts"], "label": "the flat list shows src/config.ts" },
+    { "cmd": ["wait", "--text", "docs/rate-limiting.md"], "label": "the flat list shows the docs file that the Docs group had collapsed" }
+  ]
+}
