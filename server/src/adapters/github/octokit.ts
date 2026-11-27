@@ -360,6 +360,8 @@ export class OctokitGitHubClient implements GitHubClient {
       title: res.data.title,
       body: res.data.body,
       state: res.data.state,
+      // The issues endpoint also answers for PR numbers; only those carry `pull_request`.
+      is_pull_request: !!res.data.pull_request,
     };
   }
 

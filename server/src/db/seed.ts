@@ -176,6 +176,31 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
     ]);
   }
 
+  // ---- PR #482 intent (shown on the PR page; no LLM call needed) ----
+  await db
+    .insert(t.prIntent)
+    .values({
+      prId: pr!.id,
+      intent: 'Add token-bucket rate limiting to the public API so unauthenticated clients cannot abuse it.',
+      intentClass: 'feature',
+      rationale: 'The title and description both describe a new rate limiter on the public endpoints.',
+      confidence: 'medium',
+      inScope: ['Rate-limiting middleware for public endpoints', 'Rate-limit configuration'],
+      outOfScope: ['Authenticated API behaviour', 'Billing logic'],
+      sources: [
+        { kind: 'title', ref: 'title', status: 'used', chars: 41 },
+        { kind: 'description', ref: 'description', status: 'used', chars: 89 },
+        { kind: 'branch', ref: pr!.branch, status: 'used' },
+        { kind: 'commits', ref: '1 commit(s)', status: 'used' },
+        { kind: 'paths', ref: '4 file(s)', status: 'used' },
+        { kind: 'diff_stats', ref: '+247/-38', status: 'used' },
+        { kind: 'ticket_key', ref: 'PAY-482', status: 'referenced_not_fetched' },
+      ],
+      source: 'model',
+      headSha: pr!.headSha,
+    })
+    .onConflictDoNothing();
+
   // ---- built-in agents (the starter presets) ----
   // Prompt bodies live in ./seed-prompts.ts (mirrored in docs/agent-prompts/*.md).
   const seedAgents: Array<typeof t.agents.$inferInsert> = [

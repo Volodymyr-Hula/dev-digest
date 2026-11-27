@@ -1,0 +1,94 @@
+{
+  "title": "PR intent",
+  "loadError": "Couldn't load the PR intent",
+  "retry": "Retry",
+  "empty": {
+    "text": "No intent yet. It will be derived on the next review.",
+    "deriveNow": "Derive now"
+  },
+  "class": {
+    "feature": "Feature",
+    "bugfix": "Bug fix",
+    "refactor": "Refactor",
+    "performance": "Performance",
+    "security": "Security",
+    "docs": "Docs",
+    "tests": "Tests",
+    "dependencies": "Dependencies",
+    "infra": "Infra",
+    "chore": "Chore",
+    "revert": "Revert",
+    "unknown": "Unknown"
+  },
+  "confidence": {
+    "label": "Confidence",
+    "high": "High confidence",
+    "medium": "Medium confidence",
+    "low": "Low confidence"
+  },
+  "lowNotice": "This intent was inferred from indirect signals only (title, branch, commits and changed files). Add a description or link an issue or plan, or edit the intent yourself.",
+  "marker": {
+    "user": "user",
+    "userTitle": "Edited by you; used for every review of this PR",
+    "stale": "stale",
+    "staleTitle": "The PR head moved since this intent was saved"
+  },
+  "actions": {
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "rederive": "Re-derive"
+  },
+  "fields": {
+    "class": "Intent class",
+    "summary": "Summary",
+    "inScope": "In scope (one per line)",
+    "outOfScope": "Out of scope (one per line)",
+    "scopeInvalid": "At most 8 lines of 200 characters each."
+  },
+  "scope": {
+    "in": "In scope",
+    "out": "Out of scope",
+    "none": "Nothing listed"
+  },
+  "rationale": "Rationale",
+  "sources": {
+    "title": "Sources",
+    "kind": {
+      "title": "Title",
+      "description": "Description",
+      "linked_issue": "Linked issue",
+      "ticket_key": "Ticket key",
+      "plan_doc": "Plan document",
+      "spec_doc": "Spec document",
+      "branch": "Branch",
+      "commits": "Commits",
+      "paths": "Changed paths",
+      "diff_stats": "Diff stats",
+      "external_link": "External link"
+    },
+    "status": {
+      "used": "used",
+      "truncated": "truncated",
+      "not_found": "not found",
+      "referenced_not_fetched": "not fetched",
+      "skipped_pull_request": "skipped (pull request)"
+    },
+    "hint": {
+      "not_found": "Could not be read, so it was not used.",
+      "referenced_not_fetched": "Mentioned but never fetched.",
+      "skipped_pull_request": "This number is a pull request, not an issue."
+    },
+    "version": {
+      "pr_head": "PR head",
+      "default_branch": "default branch"
+    },
+    "role": {
+      "target": "target",
+      "background": "background"
+    }
+  },
+  "meta": {
+    "derivedBy": "Derived by {model}"
+  }
+}

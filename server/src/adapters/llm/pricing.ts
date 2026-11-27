@@ -24,6 +24,9 @@ const PRICING: Record<string, Price> = {
   'claude-3-5-sonnet-latest': { in: 3.0, out: 15.0 },
   'claude-3-5-haiku-latest': { in: 0.8, out: 4.0 },
   'claude-3-opus-latest': { in: 15.0, out: 75.0 },
+  // Priced, but unusable through AnthropicProvider until its forced `tool_choice`
+  // is replaced (see docs/known-gaps.md).
+  'claude-haiku-5-5': { in: 0.1, out: 0.5 },
   // OpenRouter (CI runner, cheap models). Slugs + prices are APPROXIMATE and
   // must be confirmed against openrouter.ai/models before relying on cost.
   // Unknown slugs fall through to null cost (explicitly flagged), which is safe.

@@ -33,6 +33,7 @@ import type {
   SecretKey,
 } from '@devdigest/shared';
 import { parseUnifiedDiff } from './git/diff-parser.js';
+import { assertShowFileArgs } from './git/show-file-guard.js';
 import type { FetchedFile, RemoteFetcher } from '../modules/skills/types.js';
 import { AppError } from '../platform/errors.js';
 
@@ -127,10 +128,16 @@ export interface MockGitHubOptions {
   login?: string;
   /** Existing inline review comments returned by listReviewComments. */
   comments?: PrReviewComment[];
+  /**
+   * Issues returned by getIssue, keyed by number (merged over the default
+   * `Issue #N` stub). A `null` entry simulates a 404 (getIssue throws).
+   */
+  issues?: Record<number, Partial<IssueMeta> | null>;
 }
 
 export class MockGitHubClient implements GitHubClient {
   public posted: { n: number; review: GitHubReviewPayload }[] = [];
+  public issueCalls: number[] = [];
   public openedPrs: OpenPrPayload[] = [];
   public committed: CommitFilesPayload[] = [];
   public createdComments: CreateReviewCommentInput[] = [];
@@ -233,7 +240,10 @@ export class MockGitHubClient implements GitHubClient {
   }
 
   async getIssue(_repo: RepoRef, n: number): Promise<IssueMeta> {
-    return { number: n, title: `Issue #${n}`, body: 'mock issue', state: 'open' };
+    this.issueCalls.push(n);
+    const custom = this.opts.issues?.[n];
+    if (custom === null) throw new Error(`Not Found: issue #${n}`);
+    return { number: n, title: `Issue #${n}`, body: 'mock issue', state: 'open', ...custom };
   }
 
   async currentLogin(): Promise<string> {
@@ -251,11 +261,16 @@ export interface MockGitOptions {
   head?: string;
   /** Head `currentHead()` returns AFTER `sync()` runs — simulates fetch+reset advancing HEAD. */
   syncedHead?: string;
+  /** File contents at a ref, keyed `${ref}:${path}` — what `showFile` returns. */
+  filesAtRef?: Record<string, string>;
 }
 
 export class MockGitClient implements GitClient {
   public cloned: { repo: RepoRef; url: string }[] = [];
   public syncs: { repo: RepoRef; branch: string }[] = [];
+  public fetchedPullHeads: { repo: RepoRef; n: number }[] = [];
+  public shownFiles: { repo: RepoRef; ref: string; path: string }[] = [];
+  public readFiles: { repo: RepoRef; path: string }[] = [];
   private syncedHead?: string;
 
   constructor(private opts: MockGitOptions = {}) {}
@@ -267,7 +282,9 @@ export class MockGitClient implements GitClient {
     this.cloned.push({ repo, url });
     return { path: this.clonePathFor(repo) };
   }
-  async fetchPullHead(): Promise<void> {}
+  async fetchPullHead(repo: RepoRef, n: number): Promise<void> {
+    this.fetchedPullHeads.push({ repo, n });
+  }
   async sync(repo: RepoRef, branch: string): Promise<{ head: string }> {
     this.syncs.push({ repo, branch });
     // After a sync, HEAD advances to syncedHead (or stays at head if unset).
@@ -292,8 +309,16 @@ export class MockGitClient implements GitClient {
   async log(): Promise<GitCommit[]> {
     return [{ sha: 'a1b2c3d4', message: 'init', author: 'marisa.koch', date: '2026-06-01' }];
   }
-  async readFile(_repo: RepoRef, path: string): Promise<string> {
+  async readFile(repo: RepoRef, path: string): Promise<string> {
+    this.readFiles.push({ repo, path });
     return this.opts.files?.[path] ?? '';
+  }
+  async showFile(repo: RepoRef, ref: string, path: string): Promise<string> {
+    assertShowFileArgs(ref, path);
+    this.shownFiles.push({ repo, ref, path });
+    const content = this.opts.filesAtRef?.[`${ref}:${path}`];
+    if (content === undefined) throw new Error(`fatal: path '${path}' does not exist in '${ref}'`);
+    return content;
   }
 }
 

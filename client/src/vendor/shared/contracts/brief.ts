@@ -13,6 +13,92 @@ export const Intent = z.object({
 });
 export type Intent = z.infer<typeof Intent>;
 
+// ---- PR intent layer (why a PR exists; fed to the reviewer prompt) ----
+export const IntentClass = z.enum([
+  'feature',
+  'bugfix',
+  'refactor',
+  'performance',
+  'security',
+  'docs',
+  'tests',
+  'dependencies',
+  'infra',
+  'chore',
+  'revert',
+  'unknown',
+]);
+export type IntentClass = z.infer<typeof IntentClass>;
+
+/** Computed by code from which sources were present — never taken from the model. */
+export const IntentConfidence = z.enum(['high', 'medium', 'low']);
+export type IntentConfidence = z.infer<typeof IntentConfidence>;
+
+export const IntentSourceKind = z.enum([
+  'title',
+  'description',
+  'linked_issue',
+  'ticket_key',
+  'plan_doc',
+  'spec_doc',
+  'branch',
+  'commits',
+  'paths',
+  'diff_stats',
+  'external_link',
+]);
+export type IntentSourceKind = z.infer<typeof IntentSourceKind>;
+
+export const IntentSource = z.object({
+  kind: IntentSourceKind,
+  ref: z.string(),
+  role: z.enum(['target', 'background']).optional(),
+  status: z.enum(['used', 'truncated', 'not_found', 'referenced_not_fetched', 'skipped_pull_request']),
+  version: z.enum(['pr_head', 'default_branch']).optional(),
+  chars: z.number().int().optional(),
+  reason: z.string().optional(),
+});
+export type IntentSource = z.infer<typeof IntentSource>;
+
+/** Classifier (LLM) output. No min/max constraints (strict json_schema); no confidence. */
+export const IntentClassification = z.object({
+  intent_class: IntentClass,
+  summary: z.string(),
+  rationale: z.string(),
+  in_scope: z.array(z.string()),
+  out_of_scope: z.array(z.string()),
+});
+export type IntentClassification = z.infer<typeof IntentClassification>;
+
+/** Stored + served PR intent. `intent` holds the summary text. */
+export const PrIntent = Intent.extend({
+  pr_id: z.string(),
+  intent_class: IntentClass,
+  rationale: z.string(),
+  confidence: IntentConfidence,
+  sources: z.array(IntentSource),
+  source: z.enum(['model', 'user']),
+  head_sha: z.string().nullable(),
+  stale: z.boolean(),
+  provider: z.string().nullable(),
+  model: z.string().nullable(),
+  cost_usd: z.number().nullable(),
+  updated_at: z.string(),
+});
+export type PrIntent = z.infer<typeof PrIntent>;
+
+/** User override body (PUT /pulls/:id/intent). */
+export const PrIntentUpdate = z.object({
+  intent_class: IntentClass,
+  intent: z.string().min(1).max(600),
+  in_scope: z.array(z.string().max(200)).max(8).default([]),
+  out_of_scope: z.array(z.string().max(200)).max(8).default([]),
+});
+export type PrIntentUpdate = z.infer<typeof PrIntentUpdate>;
+
+export const PrIntentResponse = z.object({ intent: PrIntent.nullable() });
+export type PrIntentResponse = z.infer<typeof PrIntentResponse>;
+
 // ---- Blast radius ----
 export const ChangedSymbol = z.object({
   name: z.string(),

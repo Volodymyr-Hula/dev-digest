@@ -11,6 +11,7 @@ import type {
   GitCommit,
 } from '@devdigest/shared';
 import { parseUnifiedDiff } from './diff-parser.js';
+import { assertShowFileArgs } from './show-file-guard.js';
 
 /**
  * Depth fetched by `sync()`. Deeper than the shallow clone (CLONE_DEPTH=1) so the
@@ -273,6 +274,14 @@ export class SimpleGitClient implements GitClient {
       throw new Error(`Path escapes the repository checkout: ${path}`);
     }
     return readFile(target, 'utf8');
+  }
+
+  async showFile(repo: RepoRef, ref: string, path: string): Promise<string> {
+    // Reject hostile input before any git process starts. `ref` is a sha or
+    // `pr-<n>` and `path` has no leading `-`, so `<ref>:<path>` can never be
+    // read as an option.
+    assertShowFileArgs(ref, path);
+    return this.git(repo).raw(['show', `${ref}:${path}`]);
   }
 }
 

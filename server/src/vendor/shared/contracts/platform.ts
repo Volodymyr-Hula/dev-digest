@@ -51,10 +51,10 @@ export const FEATURE_MODELS: FeatureModelDef[] = [
   },
   {
     id: 'review_intent',
-    label: 'PR Review · Intent',
+    label: 'PR Intent (classifier)',
     description: 'Derives a PR’s intent and scope before review.',
-    defaultProvider: 'openai',
-    defaultModel: 'gpt-4.1',
+    defaultProvider: 'openrouter',
+    defaultModel: 'deepseek/deepseek-v4-flash',
   },
   {
     id: 'risk_brief',
@@ -203,6 +203,8 @@ export const IssueMeta = z.object({
   title: z.string(),
   body: z.string().nullish(),
   state: z.string(),
+  /** True when the number refers to a pull request, not an issue. */
+  is_pull_request: z.boolean().optional(),
 });
 export type IssueMeta = z.infer<typeof IssueMeta>;
 
