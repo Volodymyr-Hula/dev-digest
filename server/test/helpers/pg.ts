@@ -1,17 +1,19 @@
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { randomBytes } from 'node:crypto';
+import postgres from 'postgres';
+import { inject } from 'vitest';
 import { createDb, type DbHandle } from '../../src/db/client.js';
-import { runMigrations } from '../../src/db/migrate.js';
 
 /**
- * Testcontainers helper: spin a Postgres + pgvector container, run migrations,
- * return a Drizzle client. Uses the same `pgvector/pgvector:pg16` image as
- * docker-compose so the `vector` extension is available.
+ * Integration-test database helper. ONE Postgres + pgvector container is shared
+ * by the whole run (test/helpers/pg-global-setup.ts, the `integration` vitest
+ * project) and holds a migrated template database. `startPg()` clones that
+ * template into a fresh database per call, so each test file stays isolated
+ * without its own container.
  *
  * Integration tests gate on `dockerAvailable()` and skip cleanly when Docker is
  * not reachable (CI/sandbox without a Docker daemon).
  */
 export interface PgFixture {
-  container: StartedPostgreSqlContainer;
   handle: DbHandle;
   url: string;
   stop: () => Promise<void>;
@@ -33,21 +35,38 @@ export async function dockerAvailable(): Promise<boolean> {
 }
 
 export async function startPg(): Promise<PgFixture> {
-  const container = await new PostgreSqlContainer('pgvector/pgvector:pg16')
-    .withDatabase('devdigest')
-    .withUsername('devdigest')
-    .withPassword('devdigest')
-    .start();
-  const url = container.getConnectionUri();
-  await runMigrations(url);
+  const adminUrl = inject('pgAdminUrl');
+  const template = inject('pgTemplateDb');
+  if (!adminUrl || !template) {
+    throw new Error(
+      'startPg(): no shared Postgres (pgAdminUrl is empty). Docker was unavailable in the integration globalSetup; guard the suite with dockerAvailable().',
+    );
+  }
+
+  const dbName = `t_${randomBytes(8).toString('hex')}`;
+  const admin = postgres(adminUrl, { max: 1 });
+  try {
+    await admin.unsafe(`CREATE DATABASE "${dbName}" TEMPLATE "${template}"`);
+  } finally {
+    await admin.end({ timeout: 5 });
+  }
+
+  const dbUrl = new URL(adminUrl);
+  dbUrl.pathname = `/${dbName}`;
+  const url = dbUrl.toString();
   const handle = createDb(url, { max: 5 });
+
   return {
-    container,
     handle,
     url,
     stop: async () => {
       await handle.close();
-      await container.stop();
+      const dropper = postgres(adminUrl, { max: 1 });
+      try {
+        await dropper.unsafe(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`);
+      } finally {
+        await dropper.end({ timeout: 5 });
+      }
     },
   };
 }
